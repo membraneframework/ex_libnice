@@ -1,4 +1,4 @@
-defmodule ElixirLibnice.MixProject do
+defmodule ExLibnice.MixProject do
   use Mix.Project
 
   @version "0.1.0"
@@ -61,7 +61,7 @@ defmodule ElixirLibnice.MixProject do
       main: "readme",
       extras: ["README.md", "LICENSE"],
       source_ref: "v#{@version}",
-      nest_modules_by_prefix: [ElixirLibnice]
+      nest_modules_by_prefix: [ExLibnice]
     ]
   end
 end

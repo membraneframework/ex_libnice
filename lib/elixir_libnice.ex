@@ -1,4 +1,4 @@
-defmodule ElixirLibnice do
+defmodule ExLibnice do
   @moduledoc """
   Module that wraps functions from [libnice](https://libnice.freedesktop.org/libnice/index.html).
   """
@@ -19,34 +19,31 @@ defmodule ElixirLibnice do
               cnode: nil
   end
 
-  @doc """
-  Spawns new process responsible for interacting with `libnice`.
+  @typedoc """
+  Type describing ExLibnice configuration.
 
-  - stun_servers - list of stun servers in form of ip:port
-  - turn_servers - list of turn servers in form of ip:port:proto:username:passwd
-  - controlling_mode - refer to RFC 8445 section 4 - Controlling and Controlled Agent
-  - min_port..max_port - the port range to use
+  It's a keyword list containing the following keys:
+  * parent - pid of calling process
+  * stun_servers - list of stun servers in form of ip:port
+  * controlling_mode - refer to RFC 8445 section 4 - Controlling and Controlled Agent
+  * min_port..max_port - the port range to use. Pass 0..0 if you not willing to set it.
 
   Passed port range will be set for each newly added stream. At this moment it is not possible to
   set port range per stream.
-
-  Important: at this moment turn servers are not supported and they will be ignored.
   """
-  @spec start_link(
-          parent :: pid(),
-          stun_servers :: [String.t()],
-          turn_servers :: [String.t()],
-          controlling_mode :: boolean(),
-          port_range :: 0..65_535
-        ) :: {:ok, pid()}
-  def start_link(parent, stun_servers, turn_servers, controlling_mode, port_range) do
-    GenServer.start_link(__MODULE__, [
-      parent,
-      stun_servers,
-      turn_servers,
-      controlling_mode,
-      port_range
-    ])
+  @type opts_t :: [
+          parent: pid(),
+          stun_servers: [String.t()],
+          controlling_mode: boolean(),
+          port_range: 0..65_535
+        ]
+
+  @doc """
+  Spawns new process responsible for interacting with `libnice`.
+  """
+  @spec start_link(opts :: opts_t) :: {:ok, pid()}
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts)
   end
 
   @doc """
@@ -105,7 +102,7 @@ defmodule ElixirLibnice do
 
   @doc """
   Sets remote credentials for stream with `stream_id`.
-  Credentials has to be passed in form of `'ufrag pwd'`.
+  Credentials have to be passed in form of `ufrag pwd`.
   """
   @spec set_remote_credentials(pid :: pid(), credentials :: String.t(), stream_id :: integer()) ::
           :ok | {:error, :failed_to_set_credentials}
@@ -180,19 +177,22 @@ defmodule ElixirLibnice do
 
   # Server API
   @impl true
-  def init([parent, stun_servers, turn_servers, controlling_mode, min_port..max_port]) do
+  def init(opts) do
+    turn_servers = []
+    min_port..max_port = opts[:port_range]
+
     {:ok, cnode} = Unifex.CNode.start_link(:native)
 
     :ok =
       Unifex.CNode.call(cnode, :init, [
-        stun_servers,
+        opts[:stun_servers],
         turn_servers,
-        controlling_mode,
+        opts[:controlling_mode],
         min_port,
         max_port
       ])
 
-    state = %State{parent: parent, cnode: cnode}
+    state = %State{parent: opts[:parent], cnode: cnode}
 
     {:ok, state}
   end

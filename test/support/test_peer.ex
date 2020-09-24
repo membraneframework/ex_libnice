@@ -1,4 +1,4 @@
-defmodule ElixirLibnice.Support.TestPeer do
+defmodule ExLibnice.Support.TestPeer do
   @moduledoc false
 
   use GenServer
@@ -51,27 +51,32 @@ defmodule ElixirLibnice.Support.TestPeer do
   @impl true
   def handle_cast({:start, controlling_mode}, %{peer: peer} = state) do
     {:ok, ice} =
-      ElixirLibnice.start_link(self(), ["64.233.161.127:19302"], [], controlling_mode, 0..65_535)
+      ExLibnice.start_link(
+        parent: self(),
+        stun_servers: ["64.233.161.127:19302"],
+        controlling_mode: controlling_mode,
+        port_range: 0..0
+      )
 
-    {:ok, stream_id} = ElixirLibnice.add_stream(ice, 1)
-    {:ok, credentials} = ElixirLibnice.get_local_credentials(ice, stream_id)
+    {:ok, stream_id} = ExLibnice.add_stream(ice, 1)
+    {:ok, credentials} = ExLibnice.get_local_credentials(ice, stream_id)
 
     send(peer, {:peer_credentials, credentials})
 
-    :ok = ElixirLibnice.gather_candidates(ice, stream_id)
+    :ok = ExLibnice.gather_candidates(ice, stream_id)
 
     {:noreply, %State{state | ice: ice, stream_id: stream_id}}
   end
 
   @impl true
   def handle_call(:send, _from, %{ice: ice, stream_id: stream_id} = state) do
-    :ok = ElixirLibnice.send_payload(ice, stream_id, 1, @payload)
+    :ok = ExLibnice.send_payload(ice, stream_id, 1, @payload)
     {:reply, :ok, state}
   end
 
   @impl true
   def handle_info({:peer_credentials, credentials}, %{ice: ice, stream_id: stream_id} = state) do
-    :ok = ElixirLibnice.set_remote_credentials(ice, credentials, stream_id)
+    :ok = ExLibnice.set_remote_credentials(ice, credentials, stream_id)
     {:noreply, state}
   end
 
@@ -86,7 +91,7 @@ defmodule ElixirLibnice.Support.TestPeer do
         {:peer_new_candidate_full, candidate},
         %{ice: ice, stream_id: stream_id} = state
       ) do
-    ElixirLibnice.set_remote_candidate(ice, candidate, stream_id, 1)
+    ExLibnice.set_remote_candidate(ice, candidate, stream_id, 1)
     {:noreply, state}
   end
 

@@ -20,27 +20,50 @@ end
 Basically this library works similarly to [libnice] except that it doesn't support some features
 yet (e.g. TURN servers).
 
-Example flow can look in the following way:
+Example flow can look in the following way (this is not complete i.e. runnable example).
+
+Listed functions must be invoked on both peers.
 ```elixir
+# Init ExLibnice
 {:ok, ice} =
-  ElixirLibnice.start_link(self(), ["64.233.161.127:19302"], [], controlling_mode, 0..65_535)
-{:ok, stream_id} = ElixirLibnice.add_stream(ice, 1, "audio")
-{:ok, credentials} = ElixirLibnice.get_local_credentials(ice, stream_id)
+  ExLibnice.start_link(self(), ["64.233.161.127:19302"], [], controlling_mode, 0..65_535)
 
-# now send credentials to remote peer
+# Add stream, get local credentials
+{:ok, stream_id} = ExLibnice.add_stream(ice, 1, "audio")
+{:ok, credentials} = ExLibnice.get_local_credentials(ice, stream_id)
 
-# set received credentials
-:ok = ElixirLibnice.set_remote_credentials(ice, peer_credentials, stream_id)
-
-:ok = ElixirLibnice.gather_candidates(ice, stream_id)
-# now we should prepare for receiving messages in form of `{:new_candidate_full, candidate}`
-# and send them to our peer
-
-# set received peer candidates. This will start connectivity checks. Receiving message
-# {:component_state_ready, stream_id, component_id} indicates that given component in given stream
-# is ready to send and receive messages.
-:ok = ElixirLibnice.set_remote_candidate(ice, peer_candidate, stream_id, 1)
+# Send local credentials to the remote peer
+:socket.send(peer_socket, credentials)
 ```
+
+```elixir
+# Receive remote credentials and set them on ExLibnice
+{:ok, credentials} = :socket.recv(peer_socket)
+:ok = ExLibnice.set_remote_credentials(ice, peer_credentials, stream_id)
+
+# Start gathering candidates
+:ok = ExLibnice.gather_candidates(ice, stream_id)
+```
+
+```elixir
+# Now we should prepare for receiving messages in form of `{:new_candidate_full, candidate}`
+# and send them to the remote peer. If module that runs ExLibnice is a GenServer we can use
+# handle_info/2 callback
+@impl true
+def handle_info({:new_candidate_full, candidate}, {peer_socket: peer_socket} = state) do
+  :socket.send(peer_socket, {:peer_new_candidate_full, candidate})
+end
+```
+
+```elixir
+# Set received peer candidates.
+:ok = ExLibnice.set_remote_candidate(ice, peer_candidate, stream_id, 1)
+```
+
+This will start connectivity checks. Receiving message
+`{:component_state_ready, stream_id, component_id}` indicates that the given component in the given
+stream is ready to send and receive messages.
+
 
 For more complete examples please refer to
 [membrane_ice_plugin](https://github.com/membraneframework/membrane_ice_plugin) where we use

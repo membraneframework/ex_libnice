@@ -223,7 +223,7 @@ UNIFEX_TERM get_local_credentials(UnifexEnv *env, State *state, unsigned int str
   }
   const size_t lenufrag = strlen(ufrag);
   const size_t lenpwd = strlen(pwd);
-  char *credentials = malloc(lenufrag + lenpwd + 2); // null terminator and space
+  char *credentials = (char *)unifex_alloc(lenufrag + lenpwd + 2); // null terminator and space
   memcpy(credentials, ufrag, lenufrag);
   memcpy(credentials + lenufrag, " ", 1);
   memcpy(credentials + lenufrag + 1, pwd, lenpwd + 1);

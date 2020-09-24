@@ -1,4 +1,4 @@
-defmodule ElixirLibnice.BundlexProject do
+defmodule ExLibnice.BundlexProject do
   use Bundlex.Project
 
   def project do
