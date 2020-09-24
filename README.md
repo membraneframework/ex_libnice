@@ -5,8 +5,7 @@
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `elixir_libnice` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `elixir_libnice` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -18,9 +17,34 @@ end
 
 ## Usage
 
-See [example_project](examples/example_project) for example usage or refer to
-[hex.pm](https://hex.pm/packages/membrane_ice_plugin) for more details about how to interact with
-Sink and Source.
+Basically this library works similarly to [libnice] except that it doesn't support some features
+yet (e.g. TURN servers).
+
+Example flow can look in the following way:
+```elixir
+{:ok, ice} =
+  ElixirLibnice.start_link(self(), ["64.233.161.127:19302"], [], controlling_mode, 0..65_535)
+{:ok, stream_id} = ElixirLibnice.add_stream(ice, 1, "audio")
+{:ok, credentials} = ElixirLibnice.get_local_credentials(ice, stream_id)
+
+# now send credentials to remote peer
+
+# set received credentials
+:ok = ElixirLibnice.set_remote_credentials(ice, peer_credentials, stream_id)
+
+:ok = ElixirLibnice.gather_candidates(ice, stream_id)
+# now we should prepare for receiving messages in form of `{:new_candidate_full, candidate}`
+# and send them to our peer
+
+# set received peer candidates. This will start connectivity checks. Receiving message
+# {:component_state_ready, stream_id, component_id} indicates that given component in given stream
+# is ready to send and receive messages.
+:ok = ElixirLibnice.set_remote_candidate(ice, peer_candidate, stream_id, 1)
+```
+
+For more complete examples please refer to
+[membrane_ice_plugin](https://github.com/membraneframework/membrane_ice_plugin) where we use
+`elixir_libnice` or our integration test.
 
 ## Copyright and License
 
