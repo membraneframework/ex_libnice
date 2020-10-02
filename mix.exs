@@ -2,11 +2,11 @@ defmodule ExLibnice.MixProject do
   use Mix.Project
 
   @version "0.1.0"
-  @github_url "https://github.com/membraneframework/elixir_libnice"
+  @github_url "https://github.com/membraneframework/ex_libnice"
 
   def project do
     [
-      app: :elixir_libnice,
+      app: :ex_libnice,
       version: @version,
       elixir: "~> 1.10",
       compilers: [:unifex, :bundlex] ++ Mix.compilers(),
@@ -19,7 +19,7 @@ defmodule ExLibnice.MixProject do
       package: package(),
 
       # docs
-      name: "ElixirLibnice",
+      name: "ExLibnice",
       source_url: @github_url,
       homepage_url: "https://membraneframework.org",
       docs: docs()
@@ -37,7 +37,7 @@ defmodule ExLibnice.MixProject do
 
   defp deps do
     [
-      {:unifex, "~> 0.3.1"},
+      {:unifex, git: "https://github.com/membraneframework/unifex.git", branch: "empty-args"},
       {:ex_doc, "~> 0.22", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.4", only: :dev, runtime: false}

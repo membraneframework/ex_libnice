@@ -178,6 +178,7 @@ defmodule ExLibnice do
   # Server API
   @impl true
   def init(opts) do
+    # TODO support TURN servers
     turn_servers = []
     min_port..max_port = opts[:port_range]
 

@@ -140,7 +140,8 @@ static void cb_recv(NiceAgent *agent, guint stream_id, guint component_id,
   UNIFEX_UNUSED(agent);
   UNIFEX_UNUSED(len);
   State *state = (State *)user_data;
-  UnifexPayload *payload = deserialize(state->env, buf);
+  UnifexPayload *payload = unifex_payload_alloc(state->env, UNIFEX_PAYLOAD_BINARY, len);
+  payload->data=(unsigned char*)buf;
   send_ice_payload(state->env, *state->env->reply_to, 0, stream_id, component_id, payload);
 }
 
@@ -259,9 +260,7 @@ UNIFEX_TERM set_remote_candidate(UnifexEnv *env, State *state,
 
 UNIFEX_TERM send_payload(UnifexEnv *env, State *state, unsigned int stream_id,
                          unsigned int component_id, UnifexPayload *payload) {
-  size_t size = payload->size + sizeof(int) + sizeof(UnifexPayloadType) + sizeof(int);
-  char *data = serialize(payload, size);
-  if(nice_agent_send(state->agent, stream_id, component_id, size, data) < 0) {
+  if(nice_agent_send(state->agent, stream_id, component_id, payload->size, (char *)payload->data) < 0) {
     return send_payload_result_error_failed_to_send(env);
   }
   return send_payload_result_ok(env, state);
