@@ -6,7 +6,6 @@
 
 #include "native.h"
 #include "parser.h"
-#include "unifex_util.h"
 
 static void cb_candidate_gathering_done(NiceAgent *agent, guint stream_id, gpointer user_data);
 static void cb_component_state_changed(NiceAgent *agent, guint stream_id, guint component_id,
@@ -135,13 +134,12 @@ static void cb_new_selected_pair(NiceAgent *agent, guint stream_id,
                          lfoundation, rfoundation);
 }
 
-static void cb_recv(NiceAgent *agent, guint stream_id, guint component_id,
+static void cb_recv(NiceAgent *_agent, guint stream_id, guint component_id,
                     guint len, gchar *buf, gpointer user_data) {
-  UNIFEX_UNUSED(agent);
-  UNIFEX_UNUSED(len);
+  UNIFEX_UNUSED(_agent);
   State *state = (State *)user_data;
   UnifexPayload *payload = unifex_payload_alloc(state->env, UNIFEX_PAYLOAD_BINARY, len);
-  payload->data=(unsigned char*)buf;
+  memcpy(payload->data, buf, len);
   send_ice_payload(state->env, *state->env->reply_to, 0, stream_id, component_id, payload);
 }
 
