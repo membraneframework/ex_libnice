@@ -1,2 +1,0 @@
-defmodule ElixirLibnice do
-end

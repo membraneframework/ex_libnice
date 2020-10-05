@@ -1,4 +1,4 @@
-defmodule ElixirLibnice.BundlexProject do
+defmodule ExLibnice.BundlexProject do
   use Bundlex.Project
 
   def project do
@@ -10,7 +10,7 @@ defmodule ElixirLibnice.BundlexProject do
   defp natives() do
     [
       native: [
-        sources: ["native.c"],
+        sources: ["native.c", "parser.c"],
         deps: [unifex: :unifex],
         pkg_configs: ["nice"],
         libs: ["pthread"],
