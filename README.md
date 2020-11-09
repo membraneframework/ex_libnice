@@ -1,6 +1,7 @@
 # ExLibnice
 
 [![Hex.pm](https://img.shields.io/hexpm/v/ex_libnice.svg)](https://hex.pm/packages/ex_libnice)
+[![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/ex_libnice/)
 [![CircleCI](https://circleci.com/gh/membraneframework/ex_libnice.svg?style=svg)](https://circleci.com/gh/membraneframework/ex_libnice)
 
 ## Installation
