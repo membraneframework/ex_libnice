@@ -1,7 +1,7 @@
 defmodule ExLibnice.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.1.1"
   @github_url "https://github.com/membraneframework/ex_libnice"
 
   def project do
@@ -15,7 +15,7 @@ defmodule ExLibnice.MixProject do
       deps: deps(),
 
       # hex
-      description: "Template Plugin for Membrane Multimedia Framework",
+      description: "Elixir wrapper over libnice",
       package: package(),
 
       # docs
@@ -37,10 +37,10 @@ defmodule ExLibnice.MixProject do
 
   defp deps do
     [
-      {:unifex, "~> 0.3.2"},
-      {:ex_doc, "~> 0.22", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0.0", only: :dev, runtime: false},
-      {:credo, "~> 1.4", only: :dev, runtime: false}
+      {:unifex, "~> 0.3.3"},
+      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
+      {:credo, "~> 1.5", only: :dev, runtime: false}
     ]
   end
 
