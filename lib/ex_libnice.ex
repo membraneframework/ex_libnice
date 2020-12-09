@@ -325,7 +325,6 @@ defmodule ExLibnice do
       ) do
     case Unifex.CNode.call(cnode, :send_payload, [stream_id, component_id, payload]) do
       :ok ->
-        Logger.debug("Sent payload: #{inspect(byte_size(payload))} bytes")
         {:reply, :ok, state}
 
       {:error, cause} ->
@@ -397,7 +396,6 @@ defmodule ExLibnice do
         {:ice_payload, _stream_id, _component_id, _payload} = msg,
         %State{parent: parent} = state
       ) do
-    Logger.debug("#{inspect(msg)}")
     send(parent, msg)
     {:noreply, state}
   end
