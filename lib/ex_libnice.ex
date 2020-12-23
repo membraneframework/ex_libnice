@@ -335,7 +335,7 @@ defmodule ExLibnice do
 
   @impl true
   def handle_cast({:remove_stream, stream_id}, %{cnode: cnode} = state) do
-    :ok = Unifex.CNode.call(cnode, :remove_stream, [stream_id])
+    {:ok} = Unifex.CNode.call(cnode, :remove_stream, [stream_id])
     Logger.debug("remove_stream #{stream_id}: ok")
     {:noreply, state}
   end
