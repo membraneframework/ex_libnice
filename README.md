@@ -4,6 +4,10 @@
 [![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/ex_libnice/)
 [![CircleCI](https://circleci.com/gh/membraneframework/ex_libnice.svg?style=svg)](https://circleci.com/gh/membraneframework/ex_libnice)
 
+Libnice-based Interactive Connectivity Establishment (ICE) protocol support for Elixir.
+
+It is a part of [Membrane Multimedia Framework](https://membraneframework.org).
+
 ## Installation
 
 The package can be installed by adding `ex_libnice` to your list of dependencies in `mix.exs`:
