@@ -36,6 +36,12 @@ spec set_remote_candidate(state, candidate :: string, stream_id :: unsigned, com
        | {:error :: label, :failed_to_parse_sdp_string :: label}
        | {:error :: label, :failed_to_set :: label}
 
+spec restart(state) :: {:ok :: label, state}
+       | {:error :: label, :failed_to_restart :: label}
+
+spec restart_stream(state, stream_id :: unsigned) :: {:ok :: label, state}
+       | {:error :: label, :failed_to_restart :: label}
+
 spec send_payload(state, stream_id :: unsigned, component_id :: unsigned, data :: payload) :: {:ok :: label, state}
        | {:error :: label, :failed_to_send :: label}
 
