@@ -256,6 +256,20 @@ UNIFEX_TERM set_remote_candidate(UnifexEnv *env, State *state,
   return set_remote_candidate_result_ok(env, state);
 }
 
+UNIFEX_TERM restart(UnifexEnv *env, State *state) {
+  if(nice_agent_restart(state->agent)) {
+    return restart_result_ok(env, state);
+  }
+  return restart_result_error_failed_to_restart(env);
+}
+
+UNIFEX_TERM restart_stream(UnifexEnv *env, State *state, unsigned int stream_id) {
+  if(nice_agent_restart_stream(state->agent, stream_id)) {
+    return restart_stream_result_ok(env, state);
+  }
+  return restart_stream_result_error_failed_to_restart(env);
+}
+
 UNIFEX_TERM send_payload(UnifexEnv *env, State *state, unsigned int stream_id,
                          unsigned int component_id, UnifexPayload *payload) {
   if(nice_agent_send(state->agent, stream_id, component_id, payload->size, (char *)payload->data) < 0) {

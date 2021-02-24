@@ -74,7 +74,7 @@ defmodule ExLibniceTest do
     {:ok, stream_id} = ExLibnice.add_stream(pid, 1)
     :ok = ExLibnice.gather_candidates(pid, stream_id)
     assert_receive {:new_candidate_full, _candidate}
-    assert_receive({:candidate_gathering_done, ^stream_id}, 2000)
+    assert_receive({:candidate_gathering_done, ^stream_id}, 5000)
     {:error, :invalid_stream_or_allocation} = ExLibnice.gather_candidates(pid, 2000)
   end
 

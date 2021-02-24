@@ -162,6 +162,22 @@ defmodule ExLibnice do
   end
 
   @doc """
+  Restarts all streams.
+  """
+  @spec restart(pid :: pid()) :: :ok | {:error, :failed_to_restart}
+  def restart(pid) do
+    GenServer.call(pid, :restart)
+  end
+
+  @doc """
+  Restarts stream with id `stream_id`.
+  """
+  @spec restart_stream(pid :: pid(), stream_id :: integer()) :: :ok | {:error, :failed_to_restart}
+  def restart_stream(pid, stream_id) do
+    GenServer.call(pid, {:restart_stream, stream_id})
+  end
+
+  @doc """
   Sends payload on component with id `component_id` in stream with id `stream_id`. Payload has to
   be in a binary format.
   """
@@ -313,6 +329,32 @@ defmodule ExLibnice do
 
       {:error, cause} ->
         Logger.warn("Couldn't set remote candidate: #{inspect(cause)}")
+        {:reply, {:error, cause}, state}
+    end
+  end
+
+  @impl true
+  def handle_call(:restart, _from, %{cnode: cnode} = state) do
+    case Unifex.CNode.call(cnode, :restart) do
+      :ok ->
+        Logger.debug("ICE restarted")
+        {:reply, :ok, state}
+
+      {:error, cause} ->
+        Logger.warn("Couldn't restart ICE")
+        {:reply, {:error, cause}, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:restart_stream, stream_id}, _from, %{cnode: cnode} = state) do
+    case Unifex.CNode.call(cnode, :restart_stream, [stream_id]) do
+      :ok ->
+        Logger.debug("Stream #{inspect(stream_id)} restarted")
+        {:reply, :ok, state}
+
+      {:error, cause} ->
+        Logger.warn("Couldn't restart stream #{inspect(stream_id)}")
         {:reply, {:error, cause}, state}
     end
   end
