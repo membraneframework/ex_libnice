@@ -1,6 +1,8 @@
 defmodule ExLibnice do
   @moduledoc """
   Module that wraps functions from [libnice](https://libnice.freedesktop.org/libnice/index.html).
+
+  For more information about each function please refer to [libnice] documentation.
   """
 
   use GenServer
@@ -64,6 +66,46 @@ defmodule ExLibnice do
   @spec remove_stream(pid :: pid(), stream_id :: integer()) :: :ok
   def remove_stream(pid, stream_id) do
     GenServer.cast(pid, {:remove_stream, stream_id})
+  end
+
+  @doc """
+  Sets TURN server. Can be called multiple times for the same component. `relay_type` can be "udp",
+  "tcp" or "tls".
+  """
+  @spec set_relay_info(
+          pid :: pid(),
+          stream_id :: integer(),
+          component_id :: integer(),
+          server_ip :: String.t(),
+          server_port :: integer(),
+          username :: String.t(),
+          password :: String.t(),
+          relay_type :: :udp | :tcp | :tls
+        ) :: :ok | {:error, :bad_relay_type | :failed_to_set_turn}
+  def set_relay_info(
+        pid,
+        stream_id,
+        component_id,
+        server_ip,
+        server_port,
+        username,
+        password,
+        relay_type
+      ) do
+    GenServer.call(
+      pid,
+      {:set_relay_info, stream_id, component_id, server_ip, server_port, username, password,
+       relay_type}
+    )
+  end
+
+  @doc """
+  Forget all TURN servers for given component.
+  """
+  @spec forget_relays(pid :: pid(), stream_id :: integer(), component_id :: integer()) ::
+          :ok | {:error, :component_not_found}
+  def forget_relays(pid, stream_id, component_id) do
+    GenServer.call(pid, {:forget_relays, stream_id, component_id})
   end
 
   @doc """
@@ -194,8 +236,6 @@ defmodule ExLibnice do
   # Server API
   @impl true
   def init(opts) do
-    # TODO support TURN servers
-    turn_servers = []
     min_port..max_port = opts[:port_range]
 
     {:ok, cnode} = Unifex.CNode.start_link(:native)
@@ -203,7 +243,6 @@ defmodule ExLibnice do
     :ok =
       Unifex.CNode.call(cnode, :init, [
         opts[:stun_servers],
-        turn_servers,
         opts[:controlling_mode],
         min_port,
         max_port
@@ -228,8 +267,69 @@ defmodule ExLibnice do
 
       {:error, cause} ->
         Logger.warn("""
-        Couldn't add stream with #{n_components} components and name "#{inspect(name)}":
+        Couldn't add stream with #{n_components} components and name "#{inspect(name)}": \
         #{inspect(cause)}
+        """)
+
+        {:reply, {:error, cause}, state}
+    end
+  end
+
+  @impl true
+  def handle_call(
+        {:set_relay_info, stream_id, component_id, server_ip, server_port, username, password,
+         relay_type},
+        _from,
+        %{cnode: cnode} = state
+      )
+      when relay_type in [:udp, :tcp, :tls] do
+    case Unifex.CNode.call(cnode, :set_relay_info, [
+           stream_id,
+           component_id,
+           server_ip,
+           server_port,
+           username,
+           password,
+           Atom.to_string(relay_type)
+         ]) do
+      :ok ->
+        {:reply, :ok, state}
+
+      {:error, cause} ->
+        Logger.warn("""
+        Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} for component: \
+        #{inspect(component_id)} in stream: #{inspect(stream_id)}, reason: #{cause}
+        """)
+
+        {:reply, {:error, cause}, state}
+    end
+  end
+
+  @impl true
+  def handle_call(
+        {:set_relay_info, stream_id, component_id, server_ip, server_port, _username, _password,
+         _relay_type},
+        _from,
+        state
+      ) do
+    Logger.warn("""
+    Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} for component: \
+    #{inspect(component_id)} in stream: #{inspect(stream_id)}, reason: bad_relay_type
+    """)
+
+    {:reply, {:error, :bad_relay_type}, state}
+  end
+
+  @impl true
+  def handle_call({:forget_relays, stream_id, component_id}, _from, %{cnode: cnode} = state) do
+    case Unifex.CNode.call(cnode, :forget_relays, [stream_id, component_id]) do
+      :ok ->
+        {:reply, :ok, state}
+
+      {:error, cause} ->
+        Logger.warn("""
+        Couldn't forget TURN servers for component: #{inspect(component_id)} in stream: \
+        #{inspect(stream_id)}, reason: #{inspect(cause)}
         """)
 
         {:reply, {:error, cause}, state}

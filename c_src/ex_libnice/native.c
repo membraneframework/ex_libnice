@@ -21,8 +21,7 @@ static void *main_loop_thread_func(void *user_data);
 static gboolean attach_recv(UnifexState *state, guint stream_id, guint n_components);
 
 UNIFEX_TERM init(UnifexEnv *env, char **stun_servers, unsigned int stun_servers_length,
-                 char **turn_servers, unsigned int turn_servers_length, int controlling_mode,
-                 unsigned int min_port, unsigned int max_port) {
+                 int controlling_mode, unsigned int min_port, unsigned int max_port) {
   State *state = unifex_alloc_state(env);
   state->gloop = g_main_loop_new(NULL, FALSE);
   state->agent = nice_agent_new_full(g_main_loop_get_context(state->gloop),
@@ -39,8 +38,7 @@ UNIFEX_TERM init(UnifexEnv *env, char **stun_servers, unsigned int stun_servers_
   state->max_port = max_port;
   NiceAgent *agent = state->agent;
 
-  int parse_res = parse_args(agent, stun_servers, stun_servers_length, turn_servers,
-                             turn_servers_length, controlling_mode);
+  int parse_res = parse_args(agent, stun_servers, stun_servers_length, controlling_mode);
   switch(parse_res) {
     case BAD_STUN_FORMAT:
       return unifex_raise(env, "bad stun server format");
@@ -184,6 +182,35 @@ static gboolean attach_recv(UnifexState *state, guint stream_id, guint n_compone
 UNIFEX_TERM remove_stream(UnifexEnv *env, UnifexState *state, unsigned int stream_id) {
   nice_agent_remove_stream(state->agent, stream_id);
   return remove_stream_result_ok(env);
+}
+
+UNIFEX_TERM set_relay_info(UnifexEnv *env, UnifexState *state, unsigned int stream_id,
+                           unsigned int component_id, char *server_ip, unsigned int server_port,
+                           char *username, char *password, char *relay_type) {
+  NiceRelayType nice_relay_type;
+  if (strcmp(relay_type, "udp") == 0) {
+    nice_relay_type = NICE_RELAY_TYPE_TURN_UDP;
+  } else if(strcmp(relay_type, "tcp") == 0) {
+    nice_relay_type = NICE_RELAY_TYPE_TURN_TCP;
+  } else if(strcmp(relay_type, "tls") == 0) {
+    nice_relay_type = NICE_RELAY_TYPE_TURN_TLS;
+  } else {
+    return set_relay_info_result_error_bad_relay_type(env);
+  }
+
+  if(!nice_agent_set_relay_info(state->agent, stream_id, component_id, server_ip, server_port,
+                                username, password, nice_relay_type)) {
+    return set_relay_info_result_error_failed_to_set_turn(env);
+  }
+  return set_relay_info_result_ok(env, state);
+}
+
+UNIFEX_TERM forget_relays(UnifexEnv *env, UnifexState *state, unsigned int stream_id,
+                          unsigned int component_id) {
+  if(!nice_agent_forget_relays(state->agent, stream_id, component_id)) {
+    return forget_relays_result_error_component_not_found(env);
+  }
+  return forget_relays_result_ok(env, state);
 }
 
 UNIFEX_TERM generate_local_sdp(UnifexEnv *env, UnifexState *state) {

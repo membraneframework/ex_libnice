@@ -4,8 +4,8 @@ interface CNode
 
 state_type "State"
 
-spec init(stun_servers :: [string], turn_servers :: [string], controlling_mode :: bool,
-          min_port :: unsigned, max_port :: unsigned) :: {:ok :: label, state}
+spec init(stun_servers :: [string], controlling_mode :: bool, min_port :: unsigned,
+          max_port :: unsigned) :: {:ok :: label, state}
 
 spec add_stream(state, n_components :: unsigned, name :: string) :: {:ok :: label, stream_id :: unsigned}
        | {:error :: label, :failed_to_add_stream :: label}
@@ -13,6 +13,15 @@ spec add_stream(state, n_components :: unsigned, name :: string) :: {:ok :: labe
        | {:error :: label, :failed_to_attach_recv :: label}
 
 spec remove_stream(state, stream_id :: unsigned) :: {:ok :: label}
+
+spec set_relay_info(state, stream_id :: unsigned, component_id :: unsigned, server_ip :: string,
+       server_port :: unsigned, username :: string, password :: string, relay_type :: string) ::
+       {:ok :: label, state}
+       | {:error :: label, :bad_relay_type :: label}
+       | {:error :: label, :failed_to_set_turn :: label}
+
+spec forget_relays(state, stream_id :: unsigned, component_id :: unsigned) :: {:ok :: label, state}
+       | {:error :: label, :component_not_found :: label}
 
 spec generate_local_sdp(state) :: {:ok :: label, local_sdp :: string}
 
