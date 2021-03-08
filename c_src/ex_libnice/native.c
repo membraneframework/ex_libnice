@@ -202,7 +202,7 @@ UNIFEX_TERM set_relay_info(UnifexEnv *env, UnifexState *state, unsigned int stre
                                 username, password, nice_relay_type)) {
     return set_relay_info_result_error_failed_to_set_turn(env);
   }
-  return set_relay_info_result_ok(env, state);
+  return set_relay_info_result_ok(env);
 }
 
 UNIFEX_TERM forget_relays(UnifexEnv *env, UnifexState *state, unsigned int stream_id,
@@ -210,7 +210,7 @@ UNIFEX_TERM forget_relays(UnifexEnv *env, UnifexState *state, unsigned int strea
   if(!nice_agent_forget_relays(state->agent, stream_id, component_id)) {
     return forget_relays_result_error_component_not_found(env);
   }
-  return forget_relays_result_ok(env, state);
+  return forget_relays_result_ok(env);
 }
 
 UNIFEX_TERM generate_local_sdp(UnifexEnv *env, UnifexState *state) {

@@ -22,6 +22,13 @@ defmodule ExLibnice do
   end
 
   @typedoc """
+  Type describing TURN server configuration
+  """
+  @type relay_info ::
+          {server_ip :: String.t(), server_port :: integer(), username :: String.t(),
+           password :: String.t(), relay_type :: :udp | :tcp | :tls}
+
+  @typedoc """
   Type describing ExLibnice configuration.
 
   It's a keyword list containing the following keys:
@@ -69,34 +76,17 @@ defmodule ExLibnice do
   end
 
   @doc """
-  Sets TURN server. Can be called multiple times for the same component. `relay_type` can be "udp",
-  "tcp" or "tls".
+  Sets TURN server. Can be called multiple times for the same component to add many TURN
+  servers.
   """
   @spec set_relay_info(
           pid :: pid(),
           stream_id :: integer(),
-          component_id :: integer(),
-          server_ip :: String.t(),
-          server_port :: integer(),
-          username :: String.t(),
-          password :: String.t(),
-          relay_type :: :udp | :tcp | :tls
+          component_id :: integer() | [integer()],
+          relay_info :: relay_info() | [relay_info()]
         ) :: :ok | {:error, :bad_relay_type | :failed_to_set_turn}
-  def set_relay_info(
-        pid,
-        stream_id,
-        component_id,
-        server_ip,
-        server_port,
-        username,
-        password,
-        relay_type
-      ) do
-    GenServer.call(
-      pid,
-      {:set_relay_info, stream_id, component_id, server_ip, server_port, username, password,
-       relay_type}
-    )
+  def set_relay_info(pid, stream_id, component_id, relay_info) do
+    GenServer.call(pid, {:set_relay_info, stream_id, component_id, relay_info})
   end
 
   @doc """
@@ -276,54 +266,18 @@ defmodule ExLibnice do
   end
 
   @impl true
-  def handle_call(
-        {:set_relay_info, stream_id, component_id, server_ip, server_port, username, password,
-         relay_type},
-        _from,
-        %{cnode: cnode} = state
-      )
-      when relay_type in [:udp, :tcp, :tls] do
-    case Unifex.CNode.call(cnode, :set_relay_info, [
-           stream_id,
-           component_id,
-           server_ip,
-           server_port,
-           username,
-           password,
-           Atom.to_string(relay_type)
-         ]) do
-      :ok ->
-        {:reply, :ok, state}
+  def handle_call({:set_relay_info, stream_id, component_id, relay_info}, _from, state) do
+    ret =
+      Bunch.listify(relay_info)
+      |> Bunch.Enum.try_each(&do_set_relay_info(state, stream_id, component_id, &1))
 
-      {:error, cause} ->
-        Logger.warn("""
-        Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} for component: \
-        #{inspect(component_id)} in stream: #{inspect(stream_id)}, reason: #{cause}
-        """)
-
-        {:reply, {:error, cause}, state}
-    end
-  end
-
-  @impl true
-  def handle_call(
-        {:set_relay_info, stream_id, component_id, server_ip, server_port, _username, _password,
-         _relay_type},
-        _from,
-        state
-      ) do
-    Logger.warn("""
-    Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} for component: \
-    #{inspect(component_id)} in stream: #{inspect(stream_id)}, reason: bad_relay_type
-    """)
-
-    {:reply, {:error, :bad_relay_type}, state}
+    {:reply, ret, state}
   end
 
   @impl true
   def handle_call({:forget_relays, stream_id, component_id}, _from, %{cnode: cnode} = state) do
     case Unifex.CNode.call(cnode, :forget_relays, [stream_id, component_id]) do
-      :ok ->
+      {:ok} ->
         {:reply, :ok, state}
 
       {:error, cause} ->
@@ -546,5 +500,51 @@ defmodule ExLibnice do
   def handle_info(msg, state) do
     Logger.warn("Unknown message #{inspect(msg)}")
     {:noreply, state}
+  end
+
+  defp do_set_relay_info(state, stream_id, components, relay_info) when is_list(components),
+    do: Bunch.Enum.try_each(components, &do_set_relay_info(state, stream_id, &1, relay_info))
+
+  defp do_set_relay_info(
+         %{cnode: cnode},
+         stream_id,
+         component_id,
+         {server_ip, server_port, username, password, relay_type}
+       )
+       when relay_type in [:udp, :tcp, :tls] do
+    case Unifex.CNode.call(cnode, :set_relay_info, [
+           stream_id,
+           component_id,
+           server_ip,
+           server_port,
+           username,
+           password,
+           Atom.to_string(relay_type)
+         ]) do
+      {:ok} ->
+        :ok
+
+      {:error, _cause} = error ->
+        Logger.warn("""
+        Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} for component:
+        #{inspect(component_id)} in stream: #{inspect(stream_id)}
+        """)
+
+        error
+    end
+  end
+
+  defp do_set_relay_info(
+         _state,
+         stream_id,
+         component_id,
+         {server_ip, server_port, _username, _password, _relay_type}
+       ) do
+    Logger.warn("""
+    Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} for component: \
+        #{inspect(component_id)} in stream: #{inspect(stream_id)}, reason: bad_relay_type
+    """)
+
+    {:error, :bad_relay_type}
   end
 end

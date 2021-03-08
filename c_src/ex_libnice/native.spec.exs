@@ -16,11 +16,11 @@ spec remove_stream(state, stream_id :: unsigned) :: {:ok :: label}
 
 spec set_relay_info(state, stream_id :: unsigned, component_id :: unsigned, server_ip :: string,
        server_port :: unsigned, username :: string, password :: string, relay_type :: string) ::
-       {:ok :: label, state}
+       {:ok :: label}
        | {:error :: label, :bad_relay_type :: label}
        | {:error :: label, :failed_to_set_turn :: label}
 
-spec forget_relays(state, stream_id :: unsigned, component_id :: unsigned) :: {:ok :: label, state}
+spec forget_relays(state, stream_id :: unsigned, component_id :: unsigned) :: {:ok :: label}
        | {:error :: label, :component_not_found :: label}
 
 spec generate_local_sdp(state) :: {:ok :: label, local_sdp :: string}

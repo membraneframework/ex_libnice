@@ -37,11 +37,7 @@ defmodule ExLibniceTest do
                pid,
                stream_id,
                1,
-               "127.0.0.1",
-               3478,
-               "username",
-               "password",
-               :udp
+               {"127.0.0.1", 3478, "username", "password", :udp}
              )
 
     assert {:error, :bad_relay_type} ==
@@ -49,11 +45,7 @@ defmodule ExLibniceTest do
                pid,
                stream_id,
                1,
-               "127.0.0.1",
-               3478,
-               "username",
-               "password",
-               :bad_relay_type
+               {"127.0.0.1", 3478, "username", "password", :bad_relay_type}
              )
 
     assert {:error, :failed_to_set_turn} ==
@@ -61,11 +53,7 @@ defmodule ExLibniceTest do
                pid,
                stream_id,
                1,
-               "abc.com",
-               3478,
-               "username",
-               "password",
-               :udp
+               {"abc.com", 3478, "username", "password", :udp}
              )
   end
 
@@ -78,11 +66,7 @@ defmodule ExLibniceTest do
                pid,
                stream_id,
                1,
-               "127.0.0.1",
-               3478,
-               "username",
-               "password",
-               :udp
+               {"127.0.0.1", 3478, "username", "password", :udp}
              )
 
     assert :ok == ExLibnice.forget_relays(pid, stream_id, 1)
