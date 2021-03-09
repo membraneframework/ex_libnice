@@ -506,12 +506,26 @@ defmodule ExLibnice do
     do: Bunch.Enum.try_each(components, &do_set_relay_info(state, stream_id, &1, relay_info))
 
   defp do_set_relay_info(
+         _state,
+         stream_id,
+         component_id,
+         {server_ip, server_port, _username, _password, relay_type}
+       )
+       when relay_type not in [:udp, :tcp, :tls] do
+    Logger.warn("""
+    Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} #{inspect(relay_type)} \
+    for component: #{inspect(component_id)} in stream: #{inspect(stream_id)}, cause: bad_relay_type
+    """)
+
+    {:error, :bad_relay_type}
+  end
+
+  defp do_set_relay_info(
          %{cnode: cnode},
          stream_id,
          component_id,
          {server_ip, server_port, username, password, relay_type}
-       )
-       when relay_type in [:udp, :tcp, :tls] do
+       ) do
     case Unifex.CNode.call(cnode, :set_relay_info, [
            stream_id,
            component_id,
@@ -524,27 +538,14 @@ defmodule ExLibnice do
       :ok ->
         :ok
 
-      {:error, _cause} = error ->
+      {:error, cause} = error ->
         Logger.warn("""
-        Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} for component:
-        #{inspect(component_id)} in stream: #{inspect(stream_id)}
+        Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} \
+        #{inspect(relay_type)} for component: #{inspect(component_id)} in stream: \
+        #{inspect(stream_id)}, cause: #{inspect(cause)}
         """)
 
         error
     end
-  end
-
-  defp do_set_relay_info(
-         _state,
-         stream_id,
-         component_id,
-         {server_ip, server_port, _username, _password, _relay_type}
-       ) do
-    Logger.warn("""
-    Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} for component: \
-        #{inspect(component_id)} in stream: #{inspect(stream_id)}, reason: bad_relay_type
-    """)
-
-    {:error, :bad_relay_type}
   end
 end
