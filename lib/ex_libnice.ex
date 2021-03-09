@@ -15,10 +15,12 @@ defmodule ExLibnice do
 
     @type t :: %__MODULE__{
             parent: pid,
-            cnode: Unifex.CNode.t()
+            cnode: Unifex.CNode.t(),
+            n_components: pos_integer()
           }
     defstruct parent: nil,
-              cnode: nil
+              cnode: nil,
+              n_components: 0
   end
 
   @typedoc """
@@ -82,7 +84,7 @@ defmodule ExLibnice do
   @spec set_relay_info(
           pid :: pid(),
           stream_id :: integer(),
-          component_id :: integer() | [integer()],
+          component_id :: integer() | [integer()] | :all,
           relay_info :: relay_info() | [relay_info()]
         ) :: :ok | {:error, :bad_relay_type | :failed_to_set_turn}
   def set_relay_info(pid, stream_id, component_id, relay_info) do
@@ -253,7 +255,7 @@ defmodule ExLibnice do
     case Unifex.CNode.call(cnode, :add_stream, [n_components, name]) do
       {:ok, stream_id} ->
         Logger.debug("New stream_id: #{stream_id}")
-        {:reply, {:ok, stream_id}, state}
+        {:reply, {:ok, stream_id}, %{state | n_components: n_components}}
 
       {:error, cause} ->
         Logger.warn("""
@@ -504,6 +506,9 @@ defmodule ExLibnice do
 
   defp do_set_relay_info(state, stream_id, components, relay_info) when is_list(components),
     do: Bunch.Enum.try_each(components, &do_set_relay_info(state, stream_id, &1, relay_info))
+
+  defp do_set_relay_info(%{n_components: n_components} = state, stream_id, :all, relay_info),
+    do: Bunch.Enum.try_each(1..n_components, &do_set_relay_info(state, stream_id, &1, relay_info))
 
   defp do_set_relay_info(
          _state,

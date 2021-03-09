@@ -30,7 +30,7 @@ defmodule ExLibniceTest do
 
   test "add turn server", context do
     pid = context[:pid]
-    {:ok, stream_id} = ExLibnice.add_stream(pid, 1, "audio")
+    {:ok, stream_id} = ExLibnice.add_stream(pid, 3, "audio")
 
     assert :ok ==
              ExLibnice.set_relay_info(
@@ -38,6 +38,22 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                {"127.0.0.1", 3478, "username", "password", :udp}
+             )
+
+    assert :ok ==
+             ExLibnice.set_relay_info(
+               pid,
+               stream_id,
+               [2, 3],
+               {"127.0.0.1", 3478, "username", "password", :udp}
+             )
+
+    assert :ok ==
+             ExLibnice.set_relay_info(
+               pid,
+               stream_id,
+               :all,
+               {"127.0.0.2", 3478, "username", "password", :udp}
              )
 
     assert {:error, :bad_relay_type} ==
@@ -54,6 +70,14 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                {"abc.com", 3478, "username", "password", :udp}
+             )
+
+    assert {:error, :failed_to_set_turn} ==
+             ExLibnice.set_relay_info(
+               pid,
+               stream_id,
+               [3, 5],
+               {"127.0.0.1", 3478, "username", "password", :udp}
              )
   end
 
