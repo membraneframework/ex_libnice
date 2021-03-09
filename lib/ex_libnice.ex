@@ -277,7 +277,7 @@ defmodule ExLibnice do
   @impl true
   def handle_call({:forget_relays, stream_id, component_id}, _from, %{cnode: cnode} = state) do
     case Unifex.CNode.call(cnode, :forget_relays, [stream_id, component_id]) do
-      {:ok} ->
+      :ok ->
         {:reply, :ok, state}
 
       {:error, cause} ->
@@ -431,7 +431,7 @@ defmodule ExLibnice do
 
   @impl true
   def handle_cast({:remove_stream, stream_id}, %{cnode: cnode} = state) do
-    {:ok} = Unifex.CNode.call(cnode, :remove_stream, [stream_id])
+    :ok = Unifex.CNode.call(cnode, :remove_stream, [stream_id])
     Logger.debug("remove_stream #{stream_id}: ok")
     {:noreply, state}
   end
@@ -521,7 +521,7 @@ defmodule ExLibnice do
            password,
            Atom.to_string(relay_type)
          ]) do
-      {:ok} ->
+      :ok ->
         :ok
 
       {:error, _cause} = error ->

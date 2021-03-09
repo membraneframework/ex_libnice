@@ -181,7 +181,7 @@ static gboolean attach_recv(UnifexState *state, guint stream_id, guint n_compone
 
 UNIFEX_TERM remove_stream(UnifexEnv *env, UnifexState *state, unsigned int stream_id) {
   nice_agent_remove_stream(state->agent, stream_id);
-  return remove_stream_result_ok(env);
+  return remove_stream_result(env);
 }
 
 UNIFEX_TERM set_relay_info(UnifexEnv *env, UnifexState *state, unsigned int stream_id,
@@ -202,7 +202,7 @@ UNIFEX_TERM set_relay_info(UnifexEnv *env, UnifexState *state, unsigned int stre
                                 username, password, nice_relay_type)) {
     return set_relay_info_result_error_failed_to_set_turn(env);
   }
-  return set_relay_info_result_ok(env);
+  return set_relay_info_result(env);
 }
 
 UNIFEX_TERM forget_relays(UnifexEnv *env, UnifexState *state, unsigned int stream_id,
@@ -210,7 +210,7 @@ UNIFEX_TERM forget_relays(UnifexEnv *env, UnifexState *state, unsigned int strea
   if(!nice_agent_forget_relays(state->agent, stream_id, component_id)) {
     return forget_relays_result_error_component_not_found(env);
   }
-  return forget_relays_result_ok(env);
+  return forget_relays_result(env);
 }
 
 UNIFEX_TERM generate_local_sdp(UnifexEnv *env, UnifexState *state) {
@@ -231,14 +231,14 @@ UNIFEX_TERM gather_candidates(UnifexEnv *env, State *state, unsigned int stream_
   if(!nice_agent_gather_candidates(state->agent, stream_id)) {
     return gather_candidates_result_error_invalid_stream_or_allocation(env);
   }
-  return gather_candidates_result_ok(env, state);
+  return gather_candidates_result(env);
 }
 
 UNIFEX_TERM peer_candidate_gathering_done(UnifexEnv *env, State *state, unsigned int stream_id) {
   if(!nice_agent_peer_candidate_gathering_done(state->agent, stream_id)) {
     return peer_candidate_gathering_done_result_error_stream_not_found(env);
   }
-  return peer_candidate_gathering_done_result_ok(env, state);
+  return peer_candidate_gathering_done_result(env);
 }
 
 UNIFEX_TERM get_local_credentials(UnifexEnv *env, State *state, unsigned int stream_id) {
@@ -266,7 +266,7 @@ UNIFEX_TERM set_remote_credentials(UnifexEnv *env, State *state,
   if (!nice_agent_set_remote_credentials(state->agent, stream_id, ufrag, pwd)) {
     return set_remote_credentials_result_error_failed_to_set_credentials(env);
   }
-  return set_remote_credentials_result_ok(env, state);
+  return set_remote_credentials_result(env);
 }
 
 UNIFEX_TERM set_remote_candidate(UnifexEnv *env, State *state,
@@ -280,19 +280,19 @@ UNIFEX_TERM set_remote_candidate(UnifexEnv *env, State *state,
   if (nice_agent_set_remote_candidates(state->agent, stream_id, component_id, cands) < 0) {
     return set_remote_candidate_result_error_failed_to_set(env);
   }
-  return set_remote_candidate_result_ok(env, state);
+  return set_remote_candidate_result(env);
 }
 
 UNIFEX_TERM restart(UnifexEnv *env, State *state) {
   if(nice_agent_restart(state->agent)) {
-    return restart_result_ok(env, state);
+    return restart_result(env);
   }
   return restart_result_error_failed_to_restart(env);
 }
 
 UNIFEX_TERM restart_stream(UnifexEnv *env, State *state, unsigned int stream_id) {
   if(nice_agent_restart_stream(state->agent, stream_id)) {
-    return restart_stream_result_ok(env, state);
+    return restart_stream_result(env);
   }
   return restart_stream_result_error_failed_to_restart(env);
 }
@@ -302,7 +302,7 @@ UNIFEX_TERM send_payload(UnifexEnv *env, State *state, unsigned int stream_id,
   if(nice_agent_send(state->agent, stream_id, component_id, payload->size, (char *)payload->data) < 0) {
     return send_payload_result_error_failed_to_send(env);
   }
-  return send_payload_result_ok(env, state);
+  return send_payload_result(env);
 }
 
 void handle_destroy_state(UnifexEnv *env, State *state) {
