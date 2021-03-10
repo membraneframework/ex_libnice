@@ -56,6 +56,14 @@ defmodule ExLibniceTest do
                {"127.0.0.2", 3478, "username", "password", :udp}
              )
 
+    assert {:error, :no_components} ==
+             ExLibnice.set_relay_info(
+               pid,
+               2,
+               :all,
+               {"127.0.0.1", 3478, "username", "password", :udp}
+             )
+
     assert {:error, :bad_relay_type} ==
              ExLibnice.set_relay_info(
                pid,

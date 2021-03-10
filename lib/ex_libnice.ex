@@ -16,11 +16,11 @@ defmodule ExLibnice do
     @type t :: %__MODULE__{
             parent: pid,
             cnode: Unifex.CNode.t(),
-            n_components: pos_integer()
+            stream_components: %{stream_id: integer(), n_components: integer()}
           }
     defstruct parent: nil,
               cnode: nil,
-              n_components: 0
+              stream_components: %{}
   end
 
   @typedoc """
@@ -86,7 +86,7 @@ defmodule ExLibnice do
           stream_id :: integer(),
           component_id :: integer() | [integer()] | :all,
           relay_info :: relay_info() | [relay_info()]
-        ) :: :ok | {:error, :bad_relay_type | :failed_to_set_turn}
+        ) :: :ok | {:error, :no_components | :bad_relay_type | :failed_to_set_turn}
   def set_relay_info(pid, stream_id, component_id, relay_info) do
     GenServer.call(pid, {:set_relay_info, stream_id, component_id, relay_info})
   end
@@ -255,7 +255,7 @@ defmodule ExLibnice do
     case Unifex.CNode.call(cnode, :add_stream, [n_components, name]) do
       {:ok, stream_id} ->
         Logger.debug("New stream_id: #{stream_id}")
-        {:reply, {:ok, stream_id}, %{state | n_components: n_components}}
+        {:reply, {:ok, stream_id}, put_in(state.stream_components[stream_id], n_components)}
 
       {:error, cause} ->
         Logger.warn("""
@@ -507,8 +507,19 @@ defmodule ExLibnice do
   defp do_set_relay_info(state, stream_id, components, relay_info) when is_list(components),
     do: Bunch.Enum.try_each(components, &do_set_relay_info(state, stream_id, &1, relay_info))
 
-  defp do_set_relay_info(%{n_components: n_components} = state, stream_id, :all, relay_info),
-    do: Bunch.Enum.try_each(1..n_components, &do_set_relay_info(state, stream_id, &1, relay_info))
+  defp do_set_relay_info(state, stream_id, :all, relay_info) do
+    case Map.get(state.stream_components, stream_id) do
+      nil ->
+        Logger.warn("""
+        Couldn't set TURN servers. No components for stream id #{inspect(stream_id)}"
+        """)
+
+        {:error, :no_components}
+
+      n_components ->
+        Bunch.Enum.try_each(1..n_components, &do_set_relay_info(state, stream_id, &1, relay_info))
+    end
+  end
 
   defp do_set_relay_info(
          _state,
