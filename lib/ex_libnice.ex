@@ -86,7 +86,7 @@ defmodule ExLibnice do
           stream_id :: integer(),
           component_id :: integer() | [integer()] | :all,
           relay_info :: relay_info() | [relay_info()]
-        ) :: :ok | {:error, :no_components | :bad_relay_type | :failed_to_set_turn}
+        ) :: :ok | {:error, :bad_stream_id | :bad_relay_type | :failed_to_set_turn}
   def set_relay_info(pid, stream_id, component_id, relay_info) do
     GenServer.call(pid, {:set_relay_info, stream_id, component_id, relay_info})
   end
@@ -435,6 +435,7 @@ defmodule ExLibnice do
   def handle_cast({:remove_stream, stream_id}, %{cnode: cnode} = state) do
     :ok = Unifex.CNode.call(cnode, :remove_stream, [stream_id])
     Logger.debug("remove_stream #{stream_id}: ok")
+    {_n_components, state} = pop_in(state.stream_components[stream_id])
     {:noreply, state}
   end
 
@@ -510,11 +511,9 @@ defmodule ExLibnice do
   defp do_set_relay_info(state, stream_id, :all, relay_info) do
     case Map.get(state.stream_components, stream_id) do
       nil ->
-        Logger.warn("""
-        Couldn't set TURN servers. No components for stream id #{inspect(stream_id)}"
-        """)
+        Logger.warn("Couldn't set TURN servers. No stream with id #{inspect(stream_id)}")
 
-        {:error, :no_components}
+        {:error, :bad_stream_id}
 
       n_components ->
         Bunch.Enum.try_each(1..n_components, &do_set_relay_info(state, stream_id, &1, relay_info))
