@@ -26,9 +26,13 @@ defmodule ExLibnice do
   @typedoc """
   Type describing TURN server configuration
   """
-  @type relay_info ::
-          {server_ip :: String.t(), server_port :: integer(), username :: String.t(),
-           password :: String.t(), relay_type :: :udp | :tcp | :tls}
+  @type relay_info :: %{
+          server_ip: String.t(),
+          server_port: integer(),
+          username: String.t(),
+          password: String.t(),
+          relay_type: :udp | :tcp | :tls
+        }
 
   @typedoc """
   Type describing ExLibnice configuration.
@@ -524,7 +528,7 @@ defmodule ExLibnice do
          _state,
          stream_id,
          component_id,
-         {server_ip, server_port, _username, _password, relay_type}
+         %{server_ip: server_ip, server_port: server_port, relay_type: relay_type}
        )
        when relay_type not in [:udp, :tcp, :tls] do
     Logger.warn("""
@@ -535,12 +539,13 @@ defmodule ExLibnice do
     {:error, :bad_relay_type}
   end
 
-  defp do_set_relay_info(
-         %{cnode: cnode},
-         stream_id,
-         component_id,
-         {server_ip, server_port, username, password, relay_type}
-       ) do
+  defp do_set_relay_info(%{cnode: cnode}, stream_id, component_id, %{
+         server_ip: server_ip,
+         server_port: server_port,
+         username: username,
+         password: password,
+         relay_type: relay_type
+       }) do
     case Unifex.CNode.call(cnode, :set_relay_info, [
            stream_id,
            component_id,
