@@ -27,7 +27,7 @@ defmodule ExLibnice do
   Type describing TURN server configuration
   """
   @type relay_info :: %{
-          server_ip: String.t(),
+          server_ip: :inet.ip_address(),
           server_port: integer(),
           username: String.t(),
           password: String.t(),
@@ -549,7 +549,7 @@ defmodule ExLibnice do
     case Unifex.CNode.call(cnode, :set_relay_info, [
            stream_id,
            component_id,
-           server_ip,
+           :inet.ntoa(server_ip) |> to_string(),
            server_port,
            username,
            password,

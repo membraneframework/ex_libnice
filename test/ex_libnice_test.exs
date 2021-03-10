@@ -38,7 +38,7 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                %{
-                 :server_ip => "127.0.0.1",
+                 :server_ip => {127, 0, 0, 1},
                  :server_port => 3478,
                  :username => "username",
                  :password => "password",
@@ -52,7 +52,7 @@ defmodule ExLibniceTest do
                stream_id,
                [2, 3],
                %{
-                 :server_ip => "127.0.0.1",
+                 :server_ip => {127, 0, 0, 1},
                  :server_port => 3478,
                  :username => "username",
                  :password => "password",
@@ -66,7 +66,7 @@ defmodule ExLibniceTest do
                stream_id,
                :all,
                %{
-                 :server_ip => "127.0.0.2",
+                 :server_ip => {127, 0, 0, 2},
                  :server_port => 3478,
                  :username => "username",
                  :password => "password",
@@ -80,7 +80,7 @@ defmodule ExLibniceTest do
                2,
                :all,
                %{
-                 :server_ip => "127.0.0.1",
+                 :server_ip => {127, 0, 0, 1},
                  :server_port => 3478,
                  :username => "username",
                  :password => "password",
@@ -94,7 +94,7 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                %{
-                 :server_ip => "127.0.0.1",
+                 :server_ip => {127, 0, 0, 1},
                  :server_port => 3478,
                  :username => "username",
                  :password => "password",
@@ -106,23 +106,9 @@ defmodule ExLibniceTest do
              ExLibnice.set_relay_info(
                pid,
                stream_id,
-               1,
-               %{
-                 :server_ip => "abc.com",
-                 :server_port => 3478,
-                 :username => "username",
-                 :password => "password",
-                 :relay_type => :udp
-               }
-             )
-
-    assert {:error, :failed_to_set_turn} ==
-             ExLibnice.set_relay_info(
-               pid,
-               stream_id,
                [3, 5],
                %{
-                 :server_ip => "127.0.0.1",
+                 :server_ip => {127, 0, 0, 1},
                  :server_port => 3478,
                  :username => "username",
                  :password => "password",
@@ -141,7 +127,7 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                %{
-                 :server_ip => "127.0.0.1",
+                 :server_ip => {127, 0, 0, 1},
                  :server_port => 3478,
                  :username => "username",
                  :password => "password",
