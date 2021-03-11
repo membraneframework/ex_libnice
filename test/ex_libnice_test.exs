@@ -28,6 +28,117 @@ defmodule ExLibniceTest do
     {:error, :invalid_stream_or_duplicate_name} = ExLibnice.add_stream(pid, 1, "audio")
   end
 
+  test "add turn server", context do
+    pid = context[:pid]
+    {:ok, stream_id} = ExLibnice.add_stream(pid, 3, "audio")
+
+    assert :ok ==
+             ExLibnice.set_relay_info(
+               pid,
+               stream_id,
+               1,
+               %{
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
+               }
+             )
+
+    assert :ok ==
+             ExLibnice.set_relay_info(
+               pid,
+               stream_id,
+               [2, 3],
+               %{
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
+               }
+             )
+
+    assert :ok ==
+             ExLibnice.set_relay_info(
+               pid,
+               stream_id,
+               :all,
+               %{
+                 server_ip: {127, 0, 0, 2},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
+               }
+             )
+
+    assert {:error, :bad_stream_id} ==
+             ExLibnice.set_relay_info(
+               pid,
+               2,
+               :all,
+               %{
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
+               }
+             )
+
+    assert {:error, :bad_relay_type} ==
+             ExLibnice.set_relay_info(
+               pid,
+               stream_id,
+               1,
+               %{
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :bad_relay_type
+               }
+             )
+
+    assert {:error, :failed_to_set_turn} ==
+             ExLibnice.set_relay_info(
+               pid,
+               stream_id,
+               [3, 5],
+               %{
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
+               }
+             )
+  end
+
+  test "remove turn server", context do
+    pid = context[:pid]
+    {:ok, stream_id} = ExLibnice.add_stream(pid, 1, "audio")
+
+    assert :ok ==
+             ExLibnice.set_relay_info(
+               pid,
+               stream_id,
+               1,
+               %{
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
+               }
+             )
+
+    assert :ok == ExLibnice.forget_relays(pid, stream_id, 1)
+    assert {:error, :component_not_found} == ExLibnice.forget_relays(pid, stream_id, 10)
+  end
+
   test "generate_local_sdp", context do
     pid = context[:pid]
     {:ok, _stream_id} = ExLibnice.add_stream(pid, 1, "audio")
