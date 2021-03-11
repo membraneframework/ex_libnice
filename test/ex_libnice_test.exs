@@ -38,11 +38,11 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                %{
-                 :server_ip => {127, 0, 0, 1},
-                 :server_port => 3478,
-                 :username => "username",
-                 :password => "password",
-                 :relay_type => :udp
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
                }
              )
 
@@ -52,11 +52,11 @@ defmodule ExLibniceTest do
                stream_id,
                [2, 3],
                %{
-                 :server_ip => {127, 0, 0, 1},
-                 :server_port => 3478,
-                 :username => "username",
-                 :password => "password",
-                 :relay_type => :udp
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
                }
              )
 
@@ -66,11 +66,11 @@ defmodule ExLibniceTest do
                stream_id,
                :all,
                %{
-                 :server_ip => {127, 0, 0, 2},
-                 :server_port => 3478,
-                 :username => "username",
-                 :password => "password",
-                 :relay_type => :udp
+                 server_ip: {127, 0, 0, 2},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
                }
              )
 
@@ -80,11 +80,11 @@ defmodule ExLibniceTest do
                2,
                :all,
                %{
-                 :server_ip => {127, 0, 0, 1},
-                 :server_port => 3478,
-                 :username => "username",
-                 :password => "password",
-                 :relay_type => :udp
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
                }
              )
 
@@ -94,11 +94,11 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                %{
-                 :server_ip => {127, 0, 0, 1},
-                 :server_port => 3478,
-                 :username => "username",
-                 :password => "password",
-                 :relay_type => :bad_relay_type
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :bad_relay_type
                }
              )
 
@@ -108,11 +108,11 @@ defmodule ExLibniceTest do
                stream_id,
                [3, 5],
                %{
-                 :server_ip => {127, 0, 0, 1},
-                 :server_port => 3478,
-                 :username => "username",
-                 :password => "password",
-                 :relay_type => :udp
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
                }
              )
   end
@@ -127,11 +127,11 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                %{
-                 :server_ip => {127, 0, 0, 1},
-                 :server_port => 3478,
-                 :username => "username",
-                 :password => "password",
-                 :relay_type => :udp
+                 server_ip: {127, 0, 0, 1},
+                 server_port: 3478,
+                 username: "username",
+                 password: "password",
+                 relay_type: :udp
                }
              )
 
