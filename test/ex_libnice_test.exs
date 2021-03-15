@@ -5,7 +5,7 @@ defmodule ExLibniceTest do
     {:ok, pid} =
       ExLibnice.start_link(
         parent: self(),
-        stun_servers: ["64.233.161.127:19302"],
+        stun_servers: [%{server_addr: {64, 233, 161, 127}, server_port: 19302}],
         controlling_mode: true,
         port_range: 0..0
       )
@@ -38,7 +38,7 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                %{
-                 server_ip: {127, 0, 0, 1},
+                 server_addr: {127, 0, 0, 1},
                  server_port: 3478,
                  username: "username",
                  password: "password",
@@ -52,7 +52,7 @@ defmodule ExLibniceTest do
                stream_id,
                [2, 3],
                %{
-                 server_ip: {127, 0, 0, 1},
+                 server_addr: {127, 0, 0, 1},
                  server_port: 3478,
                  username: "username",
                  password: "password",
@@ -66,7 +66,7 @@ defmodule ExLibniceTest do
                stream_id,
                :all,
                %{
-                 server_ip: {127, 0, 0, 2},
+                 server_addr: {127, 0, 0, 2},
                  server_port: 3478,
                  username: "username",
                  password: "password",
@@ -80,7 +80,7 @@ defmodule ExLibniceTest do
                2,
                :all,
                %{
-                 server_ip: {127, 0, 0, 1},
+                 server_addr: {127, 0, 0, 1},
                  server_port: 3478,
                  username: "username",
                  password: "password",
@@ -94,7 +94,7 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                %{
-                 server_ip: {127, 0, 0, 1},
+                 server_addr: {127, 0, 0, 1},
                  server_port: 3478,
                  username: "username",
                  password: "password",
@@ -108,7 +108,7 @@ defmodule ExLibniceTest do
                stream_id,
                [3, 5],
                %{
-                 server_ip: {127, 0, 0, 1},
+                 server_addr: {127, 0, 0, 1},
                  server_port: 3478,
                  username: "username",
                  password: "password",
@@ -127,7 +127,7 @@ defmodule ExLibniceTest do
                stream_id,
                1,
                %{
-                 server_ip: {127, 0, 0, 1},
+                 server_addr: {127, 0, 0, 1},
                  server_port: 3478,
                  username: "username",
                  password: "password",

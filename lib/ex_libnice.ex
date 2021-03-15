@@ -24,11 +24,18 @@ defmodule ExLibnice do
   end
 
   @typedoc """
+  Fully qualified domain name e.g. "my.domain.com".
+  """
+  @type fqdn() :: String.t()
+
+  @type stun_server() :: %{server_addr: :inet.ip_address() | fqdn(), server_port: 0..65535}
+
+  @typedoc """
   Type describing TURN server configuration
   """
   @type relay_info :: %{
-          server_ip: :inet.ip_address(),
-          server_port: integer(),
+          server_addr: :inet.ip_address() | fqdn(),
+          server_port: 0..65535,
           username: String.t(),
           password: String.t(),
           relay_type: :udp | :tcp | :tls
@@ -48,7 +55,7 @@ defmodule ExLibnice do
   """
   @type opts_t :: [
           parent: pid(),
-          stun_servers: [String.t()],
+          stun_servers: [stun_server()],
           controlling_mode: boolean(),
           port_range: 0..65_535
         ]
@@ -90,7 +97,10 @@ defmodule ExLibnice do
           stream_id :: integer(),
           component_id :: integer() | [integer()] | :all,
           relay_info :: relay_info() | [relay_info()]
-        ) :: :ok | {:error, :bad_stream_id | :bad_relay_type | :failed_to_set_turn}
+        ) ::
+          :ok
+          | {:error,
+             :bad_stream_id | :bad_relay_type | :failed_to_resolve_addr | :failed_to_set_turn}
   def set_relay_info(pid, stream_id, component_id, relay_info) do
     GenServer.call(pid, {:set_relay_info, stream_id, component_id, relay_info})
   end
@@ -236,9 +246,11 @@ defmodule ExLibnice do
 
     {:ok, cnode} = Unifex.CNode.start_link(:native)
 
+    {:ok, stun_servers} = lookup_stun_servers(opts[:stun_servers])
+
     :ok =
       Unifex.CNode.call(cnode, :init, [
-        opts[:stun_servers],
+        stun_servers,
         opts[:controlling_mode],
         min_port,
         max_port
@@ -509,6 +521,15 @@ defmodule ExLibnice do
     {:noreply, state}
   end
 
+  defp lookup_stun_servers(stun_servers) do
+    Bunch.Enum.try_map(stun_servers, fn %{server_addr: addr, server_port: port} ->
+      case lookup_addr(addr) do
+        {:ok, ip} -> {:ok, "#{:inet.ntoa(ip)}:#{port}"}
+        {:error, _cause} = error -> error
+      end
+    end)
+  end
+
   defp do_set_relay_info(state, stream_id, components, relay_info) when is_list(components),
     do: Bunch.Enum.try_each(components, &do_set_relay_info(state, stream_id, &1, relay_info))
 
@@ -528,44 +549,67 @@ defmodule ExLibnice do
          _state,
          stream_id,
          component_id,
-         %{server_ip: server_ip, server_port: server_port, relay_type: relay_type}
+         %{server_addr: server_addr, server_port: server_port, relay_type: relay_type}
        )
        when relay_type not in [:udp, :tcp, :tls] do
     Logger.warn("""
-    Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} #{inspect(relay_type)} \
-    for component: #{inspect(component_id)} in stream: #{inspect(stream_id)}, cause: bad_relay_type
+    Couldn't set TURN server #{inspect(server_addr)} #{inspect(server_port)} \
+    #{inspect(relay_type)} for component: #{inspect(component_id)} in stream: \
+    #{inspect(stream_id)}, cause: bad_relay_type
     """)
 
     {:error, :bad_relay_type}
   end
 
   defp do_set_relay_info(%{cnode: cnode}, stream_id, component_id, %{
-         server_ip: server_ip,
+         server_addr: server_addr,
          server_port: server_port,
          username: username,
          password: password,
          relay_type: relay_type
        }) do
-    case Unifex.CNode.call(cnode, :set_relay_info, [
-           stream_id,
-           component_id,
-           :inet.ntoa(server_ip) |> to_string(),
-           server_port,
-           username,
-           password,
-           Atom.to_string(relay_type)
-         ]) do
-      :ok ->
-        :ok
-
+    case lookup_addr(server_addr) do
       {:error, cause} = error ->
         Logger.warn("""
-        Couldn't set TURN server #{inspect(server_ip)} #{inspect(server_port)} \
+        Couldn't set TURN server #{inspect(server_addr)} #{inspect(server_port)} \
         #{inspect(relay_type)} for component: #{inspect(component_id)} in stream: \
         #{inspect(stream_id)}, cause: #{inspect(cause)}
         """)
 
         error
+
+      {:ok, server_ip} ->
+        case Unifex.CNode.call(cnode, :set_relay_info, [
+               stream_id,
+               component_id,
+               :inet.ntoa(server_ip) |> to_string(),
+               server_port,
+               username,
+               password,
+               Atom.to_string(relay_type)
+             ]) do
+          :ok ->
+            :ok
+
+          {:error, cause} = error ->
+            Logger.warn("""
+            Couldn't set TURN server #{inspect(server_addr)} #{inspect(server_port)} \
+            #{inspect(relay_type)} for component: #{inspect(component_id)} in stream: \
+            #{inspect(stream_id)}, cause: #{inspect(cause)}
+            """)
+
+            error
+        end
+    end
+  end
+
+  defp lookup_addr({_a, _b, _c, _d} = addr), do: {:ok, addr}
+  defp lookup_addr({_a, _b, _c, _d, _e, _f, _g, _h} = addr), do: {:ok, addr}
+
+  defp lookup_addr(addr) do
+    case :inet_res.lookup(addr, :in, :a) do
+      [] -> {:error, :failed_to_lookup_address}
+      [h | _t] -> {:ok, h}
     end
   end
 end
