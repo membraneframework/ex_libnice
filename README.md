@@ -15,7 +15,7 @@ The package can be installed by adding `ex_libnice` to your list of dependencies
 ```elixir
 def deps do
   [
-    {:ex_libnice, "~> 0.2.0"}
+    {:ex_libnice, "~> 0.3.0"}
   ]
 end
 ```
@@ -30,8 +30,16 @@ Example flow can look in the following way (this is not complete i.e. runnable e
 Listed functions must be invoked on both peers.
 ```elixir
 # Init ExLibnice
-{:ok, ice} =
-  ExLibnice.start_link(self(), ["64.233.161.127:19302"], [], controlling_mode, 0..65_535)
+{:ok, pid} =
+  ExLibnice.start_link(
+    parent: self(),
+    stun_servers: [
+      %{server_addr: {64, 233, 161, 127}, server_port: 19_302},
+      %{server_addr: "stun1.l.google.com", server_port: 19_302}
+    ],
+    controlling_mode: true,
+    port_range: 0..0
+  )
 
 # Add stream, get local credentials
 {:ok, stream_id} = ExLibnice.add_stream(ice, 1, "audio")
