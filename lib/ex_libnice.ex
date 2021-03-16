@@ -595,8 +595,8 @@ defmodule ExLibnice do
   defp lookup_addr({_a, _b, _c, _d} = addr), do: {:ok, addr}
   defp lookup_addr({_a, _b, _c, _d, _e, _f, _g, _h} = addr), do: {:ok, addr}
 
-  defp lookup_addr(addr) do
-    case :inet_res.lookup(addr, :in, :a) do
+  defp lookup_addr(addr) when is_binary(addr) do
+    case :inet_res.lookup(to_charlist(addr), :in, :a) do
       [] -> {:error, :failed_to_lookup_address}
       [h | _t] -> {:ok, h}
     end
