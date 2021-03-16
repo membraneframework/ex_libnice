@@ -53,7 +53,7 @@ defmodule ExLibnice.Support.TestPeer do
     {:ok, ice} =
       ExLibnice.start_link(
         parent: self(),
-        stun_servers: [%{server_addr: {64, 233, 161, 127}, server_port: 19302}],
+        stun_servers: [%{server_addr: {64, 233, 161, 127}, server_port: 19_302}],
         controlling_mode: controlling_mode,
         port_range: 0..0
       )

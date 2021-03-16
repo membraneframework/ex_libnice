@@ -28,14 +28,14 @@ defmodule ExLibnice do
   """
   @type fqdn() :: String.t()
 
-  @type stun_server() :: %{server_addr: :inet.ip_address() | fqdn(), server_port: 0..65535}
+  @type stun_server() :: %{server_addr: :inet.ip_address() | fqdn(), server_port: 0..65_535}
 
   @typedoc """
   Type describing TURN server configuration
   """
   @type relay_info :: %{
           server_addr: :inet.ip_address() | fqdn(),
-          server_port: 0..65535,
+          server_port: 0..65_535,
           username: String.t(),
           password: String.t(),
           relay_type: :udp | :tcp | :tls
@@ -568,7 +568,19 @@ defmodule ExLibnice do
          password: password,
          relay_type: relay_type
        }) do
-    case lookup_addr(server_addr) do
+    with {:ok, server_ip} <- lookup_addr(server_addr),
+         :ok <-
+           Unifex.CNode.call(cnode, :set_relay_info, [
+             stream_id,
+             component_id,
+             :inet.ntoa(server_ip) |> to_string(),
+             server_port,
+             username,
+             password,
+             Atom.to_string(relay_type)
+           ]) do
+      :ok
+    else
       {:error, cause} = error ->
         Logger.warn("""
         Couldn't set TURN server #{inspect(server_addr)} #{inspect(server_port)} \
@@ -577,29 +589,6 @@ defmodule ExLibnice do
         """)
 
         error
-
-      {:ok, server_ip} ->
-        case Unifex.CNode.call(cnode, :set_relay_info, [
-               stream_id,
-               component_id,
-               :inet.ntoa(server_ip) |> to_string(),
-               server_port,
-               username,
-               password,
-               Atom.to_string(relay_type)
-             ]) do
-          :ok ->
-            :ok
-
-          {:error, cause} = error ->
-            Logger.warn("""
-            Couldn't set TURN server #{inspect(server_addr)} #{inspect(server_port)} \
-            #{inspect(relay_type)} for component: #{inspect(component_id)} in stream: \
-            #{inspect(stream_id)}, cause: #{inspect(cause)}
-            """)
-
-            error
-        end
     end
   end
 
