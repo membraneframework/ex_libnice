@@ -22,9 +22,7 @@ end
 
 ## Usage
 
-Basically this library works similarly to [libnice] except that it doesn't support some features
-yet (e.g. TURN servers).
-
+Basically this library works similarly to [libnice].
 Example flow can look in the following way (this is not complete i.e. runnable example).
 
 Listed functions must be invoked on both peers.

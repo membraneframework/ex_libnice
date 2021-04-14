@@ -139,6 +139,7 @@ static void cb_recv(NiceAgent *_agent, guint stream_id, guint component_id,
   UnifexPayload *payload = unifex_payload_alloc(state->env, UNIFEX_PAYLOAD_BINARY, len);
   memcpy(payload->data, buf, len);
   send_ice_payload(state->env, *state->env->reply_to, 0, stream_id, component_id, payload);
+  unifex_payload_release(payload);
 }
 
 UNIFEX_TERM add_stream(UnifexEnv *env, UnifexState *state,
@@ -255,7 +256,9 @@ UNIFEX_TERM get_local_credentials(UnifexEnv *env, State *state, unsigned int str
   memcpy(credentials + lenufrag + 1, pwd, lenpwd + 1);
   g_free(ufrag);
   g_free(pwd);
-  return get_local_credentials_result_ok(env, credentials);
+  UNIFEX_TERM ret = get_local_credentials_result_ok(env, credentials); 
+  unifex_free(credentials);
+  return ret;
 }
 
 UNIFEX_TERM set_remote_credentials(UnifexEnv *env, State *state,

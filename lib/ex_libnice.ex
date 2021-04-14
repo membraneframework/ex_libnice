@@ -521,6 +521,11 @@ defmodule ExLibnice do
     {:noreply, state}
   end
 
+  @impl true
+  def terminate(_reason, %State{cnode: cnode}) do
+    Unifex.CNode.stop(cnode)
+  end
+
   defp lookup_stun_servers(stun_servers) do
     Bunch.Enum.try_map(stun_servers, fn %{server_addr: addr, server_port: port} ->
       case lookup_addr(addr) do
