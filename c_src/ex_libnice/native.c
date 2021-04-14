@@ -256,7 +256,9 @@ UNIFEX_TERM get_local_credentials(UnifexEnv *env, State *state, unsigned int str
   memcpy(credentials + lenufrag + 1, pwd, lenpwd + 1);
   g_free(ufrag);
   g_free(pwd);
-  return get_local_credentials_result_ok(env, credentials);
+  UNIFEX_TERM ret = get_local_credentials_result_ok(env, credentials); 
+  unifex_free(credentials);
+  return ret;
 }
 
 UNIFEX_TERM set_remote_credentials(UnifexEnv *env, State *state,
