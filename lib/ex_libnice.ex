@@ -522,10 +522,8 @@ defmodule ExLibnice do
   end
 
   @impl true
-  def terminate(reason, %{cnode: cnode}) do
-    if reason == :normal do
-      Unifex.CNode.stop(cnode)
-    end
+  def terminate(_reason, %State{cnode: cnode}) do
+    Unifex.CNode.stop(cnode)
   end
 
   defp lookup_stun_servers(stun_servers) do
