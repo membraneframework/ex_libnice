@@ -38,6 +38,7 @@ defmodule ExLibnice.MixProject do
   defp deps do
     [
       {:unifex, "~> 0.3.3"},
+      {:mdns, github: "mickel8/mdns", branch: "nsec-and-aaaa"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:credo, "~> 1.5", only: :dev, runtime: false}
