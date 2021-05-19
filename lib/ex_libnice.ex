@@ -416,12 +416,7 @@ defmodule ExLibnice do
     if String.ends_with?(address, ".local") do
       Logger.debug("Sending query to resolve mDNS address #{inspect(address)}")
       Mdns.Client.query(address)
-
-      state = %{
-        state
-        | mdns_queries: Map.put(state.mdns_queries, address, {candidate, stream_id, component_id})
-      }
-
+      state = Bunch.Struct.put_in(state, [:mdns_queries, address], {candidate, stream_id, component_id})
       {:reply, :ok, state}
     else
       do_set_remote_candidate(candidate, stream_id, component_id, state)
@@ -542,25 +537,23 @@ defmodule ExLibnice do
   def handle_info({_namespace, %Mdns.Client.Device{} = dev} = msg, state) do
     Logger.debug("mDNS address resolved #{inspect(msg)}")
 
-    state =
-      case Map.pop(state.mdns_queries, dev.domain) do
-        {nil, mdns_queries} ->
-          Logger.debug("""
-          mDNS response for non existing candidate.
-          We have probably already resolved address #{inspect(dev.domain)}
-          """)
+    {query, state} = Bunch.Struct.pop_in(state, [:mdns_queries, dev.domain])
 
-          %{state | mdns_queries: mdns_queries}
+    case query do
+      nil ->
+        Logger.debug("""
+        mDNS response for non existing candidate.
+        We have probably already resolved address #{inspect(dev.domain)}
+        """)
 
-        {{candidate, stream_id, component_id}, mdns_queries} ->
-          candidate_parts =
-            String.split(candidate, " ", parts: 6)
-            |> List.replace_at(4, :inet.ntoa(dev.ip))
+      {candidate, stream_id, component_id} ->
+        candidate_parts =
+          String.split(candidate, " ", parts: 6)
+          |> List.replace_at(4, :inet.ntoa(dev.ip))
 
-          candidate = Enum.join(candidate_parts, " ")
-          do_set_remote_candidate(candidate, stream_id, component_id, state)
-          %{state | mdns_queries: mdns_queries}
-      end
+        candidate = Enum.join(candidate_parts, " ")
+        do_set_remote_candidate(candidate, stream_id, component_id, state)
+    end
 
     {:noreply, state}
   end
