@@ -39,7 +39,7 @@ defmodule ExLibnice.MixProject do
     [
       {:unifex, "~> 0.3.3"},
       {:bunch, "~> 1.3.0"},
-      {:mdns, "~> 1.0.12", },
+      {:mdns, "~> 1.0.12"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:credo, "~> 1.5", only: :dev, runtime: false}
