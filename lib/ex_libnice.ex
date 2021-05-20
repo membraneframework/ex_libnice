@@ -8,13 +8,12 @@ defmodule ExLibnice do
   use GenServer
   use Bunch
 
-  alias Bunch.Struct
-
   require Logger
   require Unifex.CNode
 
   defmodule State do
     @moduledoc false
+    use Bunch.Access
 
     @type t :: %__MODULE__{
             parent: pid,
@@ -415,17 +414,16 @@ defmodule ExLibnice do
   def handle_call({:set_remote_candidate, candidate, stream_id, component_id}, _from, state) do
     candidate_sp = String.split(candidate, " ", parts: 6)
 
-    withl address_error: address when address != nil <- Enum.at(candidate_sp, 4),
-          parse_error: 6 <- length(candidate_sp),
-          not_mdns: true <- String.ends_with?(address, ".local") do
+    withl candidate_check: 6 <- length(candidate_sp),
+          do: address = Enum.at(candidate_sp, 4),
+          mdns_check: true <- String.ends_with?(address, ".local") do
       Logger.debug("Sending query to resolve mDNS address #{inspect(address)}")
       Mdns.Client.query(address)
-      state = Struct.put_in(state, [:mdns_queries, address], {candidate, stream_id, component_id})
+      state = put_in(state, [:mdns_queries, address], {candidate, stream_id, component_id})
       {:reply, :ok, state}
     else
-      address_error: _ -> {:reply, {:error, :failed_to_parse_sdp_string}, state}
-      parse_error: _ -> {:reply, {:error, :failed_to_parse_sdp_string}, state}
-      not_mdns: _ -> do_set_remote_candidate(candidate, stream_id, component_id, state)
+      candidate_check: _ -> {:reply, {:error, :failed_to_parse_sdp_string}, state}
+      mdns_check: _ -> do_set_remote_candidate(candidate, stream_id, component_id, state)
     end
   end
 
@@ -543,7 +541,7 @@ defmodule ExLibnice do
   def handle_info({_namespace, %Mdns.Client.Device{} = dev} = msg, state) do
     Logger.debug("mDNS address resolved #{inspect(msg)}")
 
-    {query, state} = Struct.pop_in(state, [:mdns_queries, dev.domain])
+    {query, state} = pop_in(state, [:mdns_queries, dev.domain])
 
     case query do
       nil ->
