@@ -6,21 +6,28 @@ defmodule ExLibnice do
   """
 
   use GenServer
+  use Bunch
 
   require Logger
   require Unifex.CNode
 
   defmodule State do
     @moduledoc false
+    use Bunch.Access
 
     @type t :: %__MODULE__{
             parent: pid,
             cnode: Unifex.CNode.t(),
-            stream_components: %{stream_id: integer(), n_components: integer()}
+            stream_components: %{stream_id: integer(), n_components: integer()},
+            mdns_queries: %{
+              query: String.t(),
+              candidate: {sdp :: String.t(), stream_id :: integer(), component_id :: integer()}
+            }
           }
     defstruct parent: nil,
               cnode: nil,
-              stream_components: %{}
+              stream_components: %{},
+              mdns_queries: %{}
   end
 
   @typedoc """
@@ -258,6 +265,11 @@ defmodule ExLibnice do
 
     state = %State{parent: opts[:parent], cnode: cnode}
 
+    Logger.debug("Initializing mDNS lookup process")
+    Mdns.Client.start()
+    Logger.debug("Registering for mDNS events")
+    Mdns.EventManager.register()
+
     {:ok, state}
   end
 
@@ -390,18 +402,28 @@ defmodule ExLibnice do
 
   @impl true
   def handle_call(
-        {:set_remote_candidate, candidate, stream_id, component_id},
+        {:set_remote_candidate, "a=", _stream_id, _component_id},
         _from,
-        %{cnode: cnode} = state
+        state
       ) do
-    case Unifex.CNode.call(cnode, :set_remote_candidate, [candidate, stream_id, component_id]) do
-      :ok ->
-        Logger.debug("Set remote candidate: #{inspect(candidate)}")
-        {:reply, :ok, state}
+    Logger.debug("Empty candidate \"a=\". Should we do something with it?")
+    {:reply, :ok, state}
+  end
 
-      {:error, cause} ->
-        Logger.warn("Couldn't set remote candidate: #{inspect(cause)}")
-        {:reply, {:error, cause}, state}
+  @impl true
+  def handle_call({:set_remote_candidate, candidate, stream_id, component_id}, _from, state) do
+    candidate_sp = String.split(candidate, " ", parts: 6)
+
+    withl candidate_check: 6 <- length(candidate_sp),
+          do: address = Enum.at(candidate_sp, 4),
+          mdns_check: true <- String.ends_with?(address, ".local") do
+      Logger.debug("Sending query to resolve mDNS address #{inspect(address)}")
+      Mdns.Client.query(address)
+      state = put_in(state, [:mdns_queries, address], {candidate, stream_id, component_id})
+      {:reply, :ok, state}
+    else
+      candidate_check: _ -> {:reply, {:error, :failed_to_parse_sdp_string}, state}
+      mdns_check: _ -> do_set_remote_candidate(candidate, stream_id, component_id, state)
     end
   end
 
@@ -516,6 +538,31 @@ defmodule ExLibnice do
   end
 
   @impl true
+  def handle_info({_namespace, %Mdns.Client.Device{} = dev} = msg, state) do
+    Logger.debug("mDNS address resolved #{inspect(msg)}")
+
+    {query, state} = pop_in(state, [:mdns_queries, dev.domain])
+
+    case query do
+      nil ->
+        Logger.debug("""
+        mDNS response for non existing candidate.
+        We have probably already resolved address #{inspect(dev.domain)}
+        """)
+
+      {candidate, stream_id, component_id} ->
+        candidate_parts =
+          String.split(candidate, " ", parts: 6)
+          |> List.replace_at(4, :inet.ntoa(dev.ip))
+
+        candidate = Enum.join(candidate_parts, " ")
+        do_set_remote_candidate(candidate, stream_id, component_id, state)
+    end
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_info(msg, state) do
     Logger.warn("Unknown message #{inspect(msg)}")
     {:noreply, state}
@@ -604,6 +651,18 @@ defmodule ExLibnice do
     case :inet_res.lookup(to_charlist(addr), :in, :a) do
       [] -> {:error, :failed_to_lookup_address}
       [h | _t] -> {:ok, h}
+    end
+  end
+
+  defp do_set_remote_candidate(candidate, stream_id, component_id, %{cnode: cnode} = state) do
+    case Unifex.CNode.call(cnode, :set_remote_candidate, [candidate, stream_id, component_id]) do
+      :ok ->
+        Logger.debug("Set remote candidate: #{inspect(candidate)}")
+        {:reply, :ok, state}
+
+      {:error, cause} ->
+        Logger.warn("Couldn't set remote candidate: #{inspect(cause)}")
+        {:reply, {:error, cause}, state}
     end
   end
 end
