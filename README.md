@@ -30,6 +30,7 @@ Listed functions must be invoked on both peers.
 # Init ExLibnice
 {:ok, pid} =
   ExLibnice.start_link(
+    impl: NIF,
     parent: self(),
     stun_servers: [
       %{server_addr: {64, 233, 161, 127}, server_port: 19_302},

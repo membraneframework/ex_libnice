@@ -1,3 +1,4 @@
+# credo:disable-for-this-file Credo.Check.Readability.Specs
 defmodule ExLibnice.Support.TestPeer do
   @moduledoc false
 
@@ -11,36 +12,33 @@ defmodule ExLibnice.Support.TestPeer do
     @moduledoc false
 
     defstruct parent: nil,
+              impl: nil,
               peer: nil,
               ice: nil,
               stream_id: nil
   end
 
   # Client API
-  # credo:disable-for-next-line
-  def start_link(parent) do
-    GenServer.start_link(__MODULE__, parent)
+  def start_link(opts) do
+    GenServer.start_link(__MODULE__, opts)
   end
 
-  # credo:disable-for-next-line
   def set_peer(pid, peer) do
     GenServer.cast(pid, {:set_peer, peer})
   end
 
-  # credo:disable-for-next-line
   def start(pid, controlling_mode) do
     GenServer.cast(pid, {:start, controlling_mode})
   end
 
-  # credo:disable-for-next-line
   def send(pid) do
     GenServer.call(pid, :send)
   end
 
   # Server API
   @impl true
-  def init(parent) do
-    {:ok, %State{parent: parent}}
+  def init(opts) do
+    {:ok, %State{parent: opts[:parent], impl: opts[:impl]}}
   end
 
   @impl true
@@ -49,9 +47,10 @@ defmodule ExLibnice.Support.TestPeer do
   end
 
   @impl true
-  def handle_cast({:start, controlling_mode}, %{peer: peer} = state) do
+  def handle_cast({:start, controlling_mode}, %{peer: peer, impl: impl} = state) do
     {:ok, ice} =
       ExLibnice.start_link(
+        impl: impl,
         parent: self(),
         stun_servers: [%{server_addr: {64, 233, 161, 127}, server_port: 19_302}],
         controlling_mode: controlling_mode,

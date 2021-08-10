@@ -1,0 +1,50 @@
+defmodule ExLibnice.NIF.Test do
+  use ExUnit.Case, async: true
+
+  alias ExLibnice.Support.Common
+
+  setup do
+    Common.setup(NIF)
+  end
+
+  test("add stream", context) do
+    Common.test_add_stream(context)
+  end
+
+  test "add turn server", context do
+    Common.test_add_turn_server(context)
+  end
+
+  test "remove turn server", context do
+    Common.test_remove_turn_server(context)
+  end
+
+  test "generate_local_sdp", context do
+    Common.test_generate_local_sdp(context)
+  end
+
+  test "parse_remote_sdp", context do
+    Common.test_parse_remote_sdp(context)
+  end
+
+  test "get local credentials", context do
+    Common.test_get_local_credentials(context)
+  end
+
+  test "set remote credentials", context do
+    Common.test_set_remote_credentials(context)
+  end
+
+  @tag :debug
+  test "gather_candidates", context do
+    Common.test_gather_candidates(context)
+  end
+
+  test "peer candidate gathering done", context do
+    Common.test_peer_candidate_gathering_done(context)
+  end
+
+  test "set remote candidate", context do
+    Common.test_set_remote_candidate(context)
+  end
+end

@@ -14,7 +14,7 @@ defmodule ExLibnice.BundlexProject do
         deps: [unifex: :unifex],
         pkg_configs: ["nice"],
         libs: ["pthread"],
-        interface: :cnode,
+        interface: [:nif, :cnode],
         preprocessor: Unifex
       ]
     ]

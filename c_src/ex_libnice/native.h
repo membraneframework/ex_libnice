@@ -13,6 +13,7 @@ struct State {
   pthread_t gloop_tid;
   unsigned int min_port;
   unsigned int max_port;
+  UnifexPid reply_to;
 };
 
 #include "_generated/native.h"
