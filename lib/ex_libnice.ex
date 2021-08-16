@@ -27,7 +27,7 @@ defmodule ExLibnice do
             }
           }
     defstruct parent: nil,
-              impl: NIF,
+              impl: CNode,
               cnode: nil,
               native_state: nil,
               stream_components: %{},
@@ -56,7 +56,11 @@ defmodule ExLibnice do
   Type describing ExLibnice configuration.
 
   It's a keyword list containing the following keys:
-  * impl - implementation to use. Possible values are NIF and CNode
+  * impl - implementation to use. Possible values are NIF and CNode.
+  You can also choose `impl` via config.exs by
+  ```elixir
+  config :ex_libnice, impl: :NIF
+  ```
   * parent - pid of calling process
   * stun_servers - list of stun servers in form of ip:port
   * controlling_mode - refer to RFC 8445 section 4 - Controlling and Controlled Agent
@@ -261,7 +265,8 @@ defmodule ExLibnice do
 
     {:ok, stun_servers} = lookup_stun_servers(opts[:stun_servers])
 
-    state = %State{parent: opts[:parent], impl: opts[:impl]}
+    impl = opts[:impl] || Application.get_env(:ex_libnice, :impl, CNode)
+    state = %State{parent: opts[:parent], impl: impl}
 
     {:ok, state} =
       call(opts[:impl], :init, [stun_servers, opts[:controlling_mode], min_port, max_port], state)
