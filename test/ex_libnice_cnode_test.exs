@@ -7,15 +7,15 @@ defmodule ExLibnice.CNode.Test do
     Common.setup(CNode)
   end
 
-  test("add stream", context) do
+  test "add_stream", context do
     Common.test_add_stream(context)
   end
 
-  test "add turn server", context do
+  test "add_turn_server", context do
     Common.test_add_turn_server(context)
   end
 
-  test "remove turn server", context do
+  test "remove_turn_server", context do
     Common.test_remove_turn_server(context)
   end
 
@@ -35,16 +35,19 @@ defmodule ExLibnice.CNode.Test do
     Common.test_set_remote_credentials(context)
   end
 
-  @tag :debug
   test "gather_candidates", context do
     Common.test_gather_candidates(context)
   end
 
-  test "peer candidate gathering done", context do
+  test "peer_candidate_gathering_done", context do
     Common.test_peer_candidate_gathering_done(context)
   end
 
-  test "set remote candidate", context do
+  test "set_remote_candidate", context do
     Common.test_set_remote_candidate(context)
+  end
+
+  test "terminate", context do
+    Common.test_terminate(context)
   end
 end

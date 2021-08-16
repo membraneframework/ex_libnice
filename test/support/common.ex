@@ -218,4 +218,8 @@ defmodule ExLibnice.Support.Common do
     {:error, :failed_to_parse_sdp_string} =
       ExLibnice.set_remote_candidate(pid, "invalid_sdp_string", stream_id, 1)
   end
+
+  def test_terminate(context) do
+    :ok = ExLibnice.stop(context[:pid], :normal)
+  end
 end

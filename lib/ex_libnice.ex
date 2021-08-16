@@ -258,6 +258,14 @@ defmodule ExLibnice do
     GenServer.call(pid, {:send_payload, stream_id, component_id, payload})
   end
 
+  @doc """
+  Stops and cleans up `ExLibnice` instance.
+  """
+  @spec stop(pid :: pid(), reason :: term(), timeout :: timeout()) :: :ok
+  def stop(pid, reason \\ :normal, timeout \\ :infinity) do
+    GenServer.stop(pid, reason, timeout)
+  end
+
   # Server API
   @impl true
   def init(opts) do
@@ -574,7 +582,14 @@ defmodule ExLibnice do
 
   @impl true
   def terminate(_reason, %State{native_state: nil, cnode: cnode}) do
+    Logger.debug("Terminating ExLibnice instance #{inspect(self())}")
     Unifex.CNode.stop(cnode)
+  end
+
+  @impl true
+  def terminate(_reason, _state) do
+    Logger.debug("Terminating ExLibnice instance #{inspect(self())}")
+    :ok
   end
 
   defp do_set_relay_info(state, stream_id, n_components, relay_info) when is_list(n_components),

@@ -71,7 +71,9 @@ UNIFEX_TERM init(UnifexEnv *env, char **stun_servers, unsigned int stun_servers_
     return unifex_raise(env, "failed to create main loop thread");
   }
 
-  return init_result_ok(env, state);
+  UNIFEX_TERM ret = init_result_ok(env, state);
+  unifex_release_state(env, state);
+  return ret;
 }
 
 static void *main_loop_thread_func(void *user_data) {
@@ -313,7 +315,6 @@ UNIFEX_TERM send_payload(UnifexEnv *env, State *state, unsigned int stream_id,
 void handle_destroy_state(UnifexEnv *env, State *state) {
   UNIFEX_UNUSED(env);
   g_main_loop_quit(state->gloop);
-  pthread_kill(state->gloop_tid, SIGKILL);
   if (state->gloop) {
     g_main_loop_unref(state->gloop);
     state->gloop = NULL;
