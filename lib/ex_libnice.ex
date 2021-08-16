@@ -26,12 +26,15 @@ defmodule ExLibnice do
               candidate: {sdp :: String.t(), stream_id :: integer(), component_id :: integer()}
             }
           }
-    defstruct parent: nil,
-              impl: CNode,
-              cnode: nil,
-              native_state: nil,
-              stream_components: %{},
-              mdns_queries: %{}
+
+    @enforce_keys [:parent, :impl]
+    defstruct @enforce_keys ++
+                [
+                  cnode: nil,
+                  native_state: nil,
+                  stream_components: %{},
+                  mdns_queries: %{}
+                ]
   end
 
   @typedoc """

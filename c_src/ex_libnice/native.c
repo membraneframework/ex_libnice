@@ -34,7 +34,9 @@ UNIFEX_TERM init(UnifexEnv *env, char **stun_servers, unsigned int stun_servers_
   */
   g_object_set (G_OBJECT (state->agent), "ice-trickle", TRUE, NULL);
   state->env = unifex_alloc_env(env);
-  state->reply_to = *unifex_self(env, &state->reply_to);
+  if (!unifex_self(env, &state->reply_to)) {
+    return unifex_raise(env, "failed to create native state");
+  };
   state->min_port = min_port;
   state->max_port = max_port;
 
