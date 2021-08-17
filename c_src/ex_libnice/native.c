@@ -81,7 +81,6 @@ UNIFEX_TERM init(UnifexEnv *env, char **stun_servers, unsigned int stun_servers_
 static void *main_loop_thread_func(void *user_data) {
   GMainLoop *loop = (GMainLoop *)user_data;
   g_main_loop_run(loop);
-  g_main_loop_unref(loop);
   return NULL;
 }
 
