@@ -1,9 +1,13 @@
-defmodule ExLibniceTest do
-  use ExUnit.Case, async: true
+# credo:disable-for-this-file Credo.Check.Readability.Specs
+defmodule ExLibnice.Support.Common do
+  @moduledoc false
 
-  setup do
+  import ExUnit.Assertions
+
+  def setup(impl) do
     {:ok, pid} =
       ExLibnice.start_link(
+        impl: impl,
         parent: self(),
         stun_servers: [
           %{server_addr: {64, 233, 161, 127}, server_port: 19_302},
@@ -16,7 +20,7 @@ defmodule ExLibniceTest do
     [pid: pid]
   end
 
-  test "add stream", context do
+  def test_add_stream(context) do
     pid = context[:pid]
 
     {:ok, stream_id} = ExLibnice.add_stream(pid, 1)
@@ -31,7 +35,7 @@ defmodule ExLibniceTest do
     {:error, :invalid_stream_or_duplicate_name} = ExLibnice.add_stream(pid, 1, "audio")
   end
 
-  test "add turn server", context do
+  def test_add_turn_server(context) do
     pid = context[:pid]
     {:ok, stream_id} = ExLibnice.add_stream(pid, 3, "audio")
 
@@ -120,7 +124,7 @@ defmodule ExLibniceTest do
              )
   end
 
-  test "remove turn server", context do
+  def test_remove_turn_server(context) do
     pid = context[:pid]
     {:ok, stream_id} = ExLibnice.add_stream(pid, 1, "audio")
 
@@ -142,14 +146,14 @@ defmodule ExLibniceTest do
     assert {:error, :component_not_found} == ExLibnice.forget_relays(pid, stream_id, 10)
   end
 
-  test "generate_local_sdp", context do
+  def test_generate_local_sdp(context) do
     pid = context[:pid]
     {:ok, _stream_id} = ExLibnice.add_stream(pid, 1, "audio")
     {:ok, sdp} = ExLibnice.generate_local_sdp(pid)
     assert String.contains?(sdp, ["v=0", "m=audio", "a=ice-ufrag", "a=ice-pwd"])
   end
 
-  test "parse_remote_sdp", context do
+  def test_parse_remote_sdp(context) do
     pid = context[:pid]
 
     {:ok, _stream_id} = ExLibnice.add_stream(pid, 1, "audio")
@@ -167,14 +171,14 @@ defmodule ExLibniceTest do
       )
   end
 
-  test "get local credentials", context do
+  def test_get_local_credentials(context) do
     pid = context[:pid]
     {:ok, stream_id} = ExLibnice.add_stream(pid, 1)
     :ok = ExLibnice.gather_candidates(pid, stream_id)
     {:ok, _credentials} = ExLibnice.get_local_credentials(pid, stream_id)
   end
 
-  test "set remote credentials", context do
+  def test_set_remote_credentials(context) do
     pid = context[:pid]
     {:ok, stream_id} = ExLibnice.add_stream(pid, 1)
     :ok = ExLibnice.set_remote_credentials(pid, "DWIS nuNjkHVrkUZsfLJisHGWHy", 1)
@@ -183,7 +187,7 @@ defmodule ExLibniceTest do
       ExLibnice.set_remote_credentials(pid, "invalid_cred", stream_id)
   end
 
-  test "gather candidates", context do
+  def test_gather_candidates(context) do
     pid = context[:pid]
     {:ok, stream_id} = ExLibnice.add_stream(pid, 1)
     :ok = ExLibnice.gather_candidates(pid, stream_id)
@@ -192,14 +196,14 @@ defmodule ExLibniceTest do
     {:error, :invalid_stream_or_allocation} = ExLibnice.gather_candidates(pid, 2000)
   end
 
-  test "peer candidate gathering done", context do
+  def test_peer_candidate_gathering_done(context) do
     pid = context[:pid]
     {:ok, stream_id} = ExLibnice.add_stream(pid, 1)
     :ok = ExLibnice.peer_candidate_gathering_done(pid, stream_id)
     {:error, :stream_not_found} = ExLibnice.peer_candidate_gathering_done(pid, 2000)
   end
 
-  test "set remote candidate", context do
+  def test_set_remote_candidate(context) do
     pid = context[:pid]
     {:ok, stream_id} = ExLibnice.add_stream(pid, 1)
 
@@ -213,5 +217,9 @@ defmodule ExLibniceTest do
 
     {:error, :failed_to_parse_sdp_string} =
       ExLibnice.set_remote_candidate(pid, "invalid_sdp_string", stream_id, 1)
+  end
+
+  def test_terminate(context) do
+    :ok = ExLibnice.stop(context[:pid], :normal)
   end
 end

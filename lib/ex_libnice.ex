@@ -17,17 +17,24 @@ defmodule ExLibnice do
 
     @type t :: %__MODULE__{
             parent: pid,
+            impl: NIF | CNode,
             cnode: Unifex.CNode.t(),
+            native_state: reference(),
             stream_components: %{stream_id: integer(), n_components: integer()},
             mdns_queries: %{
               query: String.t(),
               candidate: {sdp :: String.t(), stream_id :: integer(), component_id :: integer()}
             }
           }
-    defstruct parent: nil,
-              cnode: nil,
-              stream_components: %{},
-              mdns_queries: %{}
+
+    @enforce_keys [:parent, :impl]
+    defstruct @enforce_keys ++
+                [
+                  cnode: nil,
+                  native_state: nil,
+                  stream_components: %{},
+                  mdns_queries: %{}
+                ]
   end
 
   @typedoc """
@@ -52,15 +59,20 @@ defmodule ExLibnice do
   Type describing ExLibnice configuration.
 
   It's a keyword list containing the following keys:
+  * impl - implementation to use. Possible values are NIF and CNode.
+  You can also choose `impl` via config.exs by
+  ```elixir
+  config :ex_libnice, impl: :NIF
+  ```
   * parent - pid of calling process
   * stun_servers - list of stun servers in form of ip:port
   * controlling_mode - refer to RFC 8445 section 4 - Controlling and Controlled Agent
   * min_port..max_port - the port range to use. Pass 0..0 if you not willing to set it.
-
   Passed port range will be set for each newly added stream. At this moment it is not possible to
   set port range per stream.
   """
   @type opts_t :: [
+          impl: NIF | CNode,
           parent: pid(),
           stun_servers: [stun_server()],
           controlling_mode: boolean(),
@@ -138,7 +150,9 @@ defmodule ExLibnice do
 
   @doc """
   Parses a remote SDP string setting credentials and remote candidates for proper streams and
-  components. It is important that `m` line does not contain `-` mark but the name of the stream.
+  components.
+
+  It is important that `m` line does not contain `-` mark but the name of the stream.
   """
   @spec parse_remote_sdp(pid :: pid(), sdp :: String.t()) ::
           {:ok, added_cand_num :: integer()} | {:error, :failed_to_parse_sdp}
@@ -157,6 +171,7 @@ defmodule ExLibnice do
 
   @doc """
   Sets remote credentials for stream with `stream_id`.
+
   Credentials have to be passed in form of `ufrag pwd`.
   """
   @spec set_remote_credentials(pid :: pid(), credentials :: String.t(), stream_id :: integer()) ::
@@ -196,8 +211,8 @@ defmodule ExLibnice do
 
   @doc """
   Sets remote candidate for component with id `component_id` in stream with id `stream_id`.
-  Candidate has to be passed as SDP string.
 
+  Candidate has to be passed as SDP string.
   May cause the parent process receive following messages:
   - `{:new_remote_candidate_full, candidate}` - new remote (prflx) candidate
   - `{:new_selected_pair, stream_id, component_id, lfoundation, rfoundation}` - new selected pair
@@ -246,24 +261,26 @@ defmodule ExLibnice do
     GenServer.call(pid, {:send_payload, stream_id, component_id, payload})
   end
 
+  @doc """
+  Stops and cleans up `ExLibnice` instance.
+  """
+  @spec stop(pid :: pid(), reason :: term(), timeout :: timeout()) :: :ok
+  def stop(pid, reason \\ :normal, timeout \\ :infinity) do
+    GenServer.stop(pid, reason, timeout)
+  end
+
   # Server API
   @impl true
   def init(opts) do
     min_port..max_port = opts[:port_range]
 
-    {:ok, cnode} = Unifex.CNode.start_link(:native)
-
     {:ok, stun_servers} = lookup_stun_servers(opts[:stun_servers])
 
-    :ok =
-      Unifex.CNode.call(cnode, :init, [
-        stun_servers,
-        opts[:controlling_mode],
-        min_port,
-        max_port
-      ])
+    impl = opts[:impl] || Application.get_env(:ex_libnice, :impl, CNode)
+    state = %State{parent: opts[:parent], impl: impl}
 
-    state = %State{parent: opts[:parent], cnode: cnode}
+    {:ok, state} =
+      call(opts[:impl], :init, [stun_servers, opts[:controlling_mode], min_port, max_port], state)
 
     Logger.debug("Initializing mDNS lookup process")
     Mdns.Client.start()
@@ -279,13 +296,13 @@ defmodule ExLibnice do
   end
 
   @impl true
-  def handle_call({:add_stream, n_components, name}, _from, %{cnode: cnode} = state) do
-    case Unifex.CNode.call(cnode, :add_stream, [n_components, name]) do
-      {:ok, stream_id} ->
+  def handle_call({:add_stream, n_components, name}, _from, state) do
+    case call(state.impl, :add_stream, [n_components, name], state) do
+      {{:ok, stream_id}, state} ->
         Logger.debug("New stream_id: #{stream_id}")
         {:reply, {:ok, stream_id}, put_in(state.stream_components[stream_id], n_components)}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.warn("""
         Couldn't add stream with #{n_components} components and name "#{inspect(name)}": \
         #{inspect(cause)}
@@ -297,20 +314,22 @@ defmodule ExLibnice do
 
   @impl true
   def handle_call({:set_relay_info, stream_id, component_id, relay_info}, _from, state) do
-    ret =
+    {ret, state} =
       Bunch.listify(relay_info)
-      |> Bunch.Enum.try_each(&do_set_relay_info(state, stream_id, component_id, &1))
+      |> Bunch.Enum.try_reduce(state, fn single_relay_info, state ->
+        do_set_relay_info(state, stream_id, component_id, single_relay_info)
+      end)
 
     {:reply, ret, state}
   end
 
   @impl true
-  def handle_call({:forget_relays, stream_id, component_id}, _from, %{cnode: cnode} = state) do
-    case Unifex.CNode.call(cnode, :forget_relays, [stream_id, component_id]) do
-      :ok ->
+  def handle_call({:forget_relays, stream_id, component_id}, _from, state) do
+    case call(state.impl, :forget_relays, [stream_id, component_id], state) do
+      {:ok, state} ->
         {:reply, :ok, state}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.warn("""
         Couldn't forget TURN servers for component: #{inspect(component_id)} in stream: \
         #{inspect(stream_id)}, reason: #{inspect(cause)}
@@ -321,33 +340,33 @@ defmodule ExLibnice do
   end
 
   @impl true
-  def handle_call(:generate_local_sdp, _from, %{cnode: cnode} = state) do
-    {:ok, local_sdp} = Unifex.CNode.call(cnode, :generate_local_sdp)
+  def handle_call(:generate_local_sdp, _from, state) do
+    {{:ok, local_sdp}, state} = call(state.impl, :generate_local_sdp, [], state)
     Logger.debug("local sdp: #{inspect(local_sdp)}")
     {:reply, {:ok, local_sdp}, state}
   end
 
   @impl true
-  def handle_call({:parse_remote_sdp, remote_sdp}, _from, %{cnode: cnode} = state) do
-    case Unifex.CNode.call(cnode, :parse_remote_sdp, [remote_sdp]) do
-      {:ok, added_cand_num} ->
+  def handle_call({:parse_remote_sdp, remote_sdp}, _from, state) do
+    case call(state.impl, :parse_remote_sdp, [remote_sdp], state) do
+      {{:ok, added_cand_num}, state} ->
         Logger.debug("parse_remote_sdp: ok; added #{added_cand_num} candidates")
         {:reply, {:ok, added_cand_num}, state}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.warn("Couldn't parse remote sdp #{inspect(remote_sdp)}")
         {:reply, {:error, cause}, state}
     end
   end
 
   @impl true
-  def handle_call({:get_local_credentials, stream_id}, _from, %{cnode: cnode} = state) do
-    case Unifex.CNode.call(cnode, :get_local_credentials, [stream_id]) do
-      {:ok, credentials} ->
+  def handle_call({:get_local_credentials, stream_id}, _from, state) do
+    case call(state.impl, :get_local_credentials, [stream_id], state) do
+      {{:ok, credentials}, state} ->
         Logger.debug("local credentials: #{credentials}")
         {:reply, {:ok, credentials}, state}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.error("get_local_credentials: #{inspect(cause)}")
         {{:error, cause}, state}
     end
@@ -357,27 +376,27 @@ defmodule ExLibnice do
   def handle_call(
         {:set_remote_credentials, credentials, stream_id},
         _from,
-        %{cnode: cnode} = state
+        state
       ) do
-    case Unifex.CNode.call(cnode, :set_remote_credentials, [credentials, stream_id]) do
-      :ok ->
+    case call(state.impl, :set_remote_credentials, [credentials, stream_id], state) do
+      {:ok, state} ->
         Logger.debug("set_remote_credentials: ok")
         {:reply, :ok, state}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.error("set_remote_credentials: #{inspect(cause)}")
         {:reply, {:error, cause}, state}
     end
   end
 
   @impl true
-  def handle_call({:gather_candidates, stream_id} = msg, _from, %{cnode: cnode} = state) do
-    case Unifex.CNode.call(cnode, :gather_candidates, [stream_id]) do
-      :ok ->
+  def handle_call({:gather_candidates, stream_id} = msg, _from, state) do
+    case call(state.impl, :gather_candidates, [stream_id], state) do
+      {:ok, state} ->
         Logger.debug("#{inspect(msg)}")
         {:reply, :ok, state}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.error("gather_candidates: #{inspect(msg)}")
         {:reply, {:error, cause}, state}
     end
@@ -387,14 +406,14 @@ defmodule ExLibnice do
   def handle_call(
         {:peer_candidate_gathering_done, stream_id},
         _ctx,
-        %{cnode: cnode} = state
+        state
       ) do
-    case Unifex.CNode.call(cnode, :peer_candidate_gathering_done, [stream_id]) do
-      :ok ->
+    case call(state.impl, :peer_candidate_gathering_done, [stream_id], state) do
+      {:ok, state} ->
         Logger.debug("peer_candidate_gathering_done: ok")
         {:reply, :ok, state}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.warn("peer_candidate_gathering_done: #{inspect(cause)}")
         {:reply, {:error, cause}, state}
     end
@@ -428,50 +447,46 @@ defmodule ExLibnice do
   end
 
   @impl true
-  def handle_call(:restart, _from, %{cnode: cnode} = state) do
-    case Unifex.CNode.call(cnode, :restart) do
-      :ok ->
+  def handle_call(:restart, _from, state) do
+    case call(state.impl, :restart, [], state) do
+      {:ok, state} ->
         Logger.debug("ICE restarted")
         {:reply, :ok, state}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.warn("Couldn't restart ICE")
         {:reply, {:error, cause}, state}
     end
   end
 
   @impl true
-  def handle_call({:restart_stream, stream_id}, _from, %{cnode: cnode} = state) do
-    case Unifex.CNode.call(cnode, :restart_stream, [stream_id]) do
-      :ok ->
+  def handle_call({:restart_stream, stream_id}, _from, state) do
+    case call(state.impl, :restart_stream, [stream_id], state) do
+      {:ok, state} ->
         Logger.debug("Stream #{inspect(stream_id)} restarted")
         {:reply, :ok, state}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.warn("Couldn't restart stream #{inspect(stream_id)}")
         {:reply, {:error, cause}, state}
     end
   end
 
   @impl true
-  def handle_call(
-        {:send_payload, stream_id, component_id, payload},
-        _from,
-        %{cnode: cnode} = state
-      ) do
-    case Unifex.CNode.call(cnode, :send_payload, [stream_id, component_id, payload]) do
-      :ok ->
+  def handle_call({:send_payload, stream_id, component_id, payload}, _from, state) do
+    case call(state.impl, :send_payload, [stream_id, component_id, payload], state) do
+      {:ok, state} ->
         {:reply, :ok, state}
 
-      {:error, cause} ->
+      {{:error, cause}, state} ->
         Logger.warn("Couldn't send payload: #{inspect(cause)}")
         {:reply, {:error, cause}, state}
     end
   end
 
   @impl true
-  def handle_cast({:remove_stream, stream_id}, %{cnode: cnode} = state) do
-    :ok = Unifex.CNode.call(cnode, :remove_stream, [stream_id])
+  def handle_cast({:remove_stream, stream_id}, state) do
+    {:ok, state} = call(state.impl, :remove_stream, [stream_id], state)
     Logger.debug("remove_stream #{stream_id}: ok")
     {_n_components, state} = pop_in(state.stream_components[stream_id])
     {:noreply, state}
@@ -569,36 +584,39 @@ defmodule ExLibnice do
   end
 
   @impl true
-  def terminate(_reason, %State{cnode: cnode}) do
+  def terminate(_reason, %State{native_state: nil, cnode: cnode}) do
+    Logger.debug("Terminating ExLibnice instance #{inspect(self())}")
     Unifex.CNode.stop(cnode)
   end
 
-  defp lookup_stun_servers(stun_servers) do
-    Bunch.Enum.try_map(stun_servers, fn %{server_addr: addr, server_port: port} ->
-      case lookup_addr(addr) do
-        {:ok, ip} -> {:ok, "#{:inet.ntoa(ip)}:#{port}"}
-        {:error, _cause} = error -> error
-      end
-    end)
+  @impl true
+  def terminate(_reason, _state) do
+    Logger.debug("Terminating ExLibnice instance #{inspect(self())}")
+    :ok
   end
 
-  defp do_set_relay_info(state, stream_id, components, relay_info) when is_list(components),
-    do: Bunch.Enum.try_each(components, &do_set_relay_info(state, stream_id, &1, relay_info))
+  defp do_set_relay_info(state, stream_id, n_components, relay_info) when is_list(n_components),
+    do:
+      Bunch.Enum.try_reduce(n_components, state, fn n_component, state ->
+        do_set_relay_info(state, stream_id, n_component, relay_info)
+      end)
 
   defp do_set_relay_info(state, stream_id, :all, relay_info) do
     case Map.get(state.stream_components, stream_id) do
       nil ->
         Logger.warn("Couldn't set TURN servers. No stream with id #{inspect(stream_id)}")
 
-        {:error, :bad_stream_id}
+        {{:error, :bad_stream_id}, state}
 
       n_components ->
-        Bunch.Enum.try_each(1..n_components, &do_set_relay_info(state, stream_id, &1, relay_info))
+        Bunch.Enum.try_reduce(1..n_components, state, fn n_component, state ->
+          do_set_relay_info(state, stream_id, n_component, relay_info)
+        end)
     end
   end
 
   defp do_set_relay_info(
-         _state,
+         state,
          stream_id,
          component_id,
          %{server_addr: server_addr, server_port: server_port, relay_type: relay_type}
@@ -610,10 +628,10 @@ defmodule ExLibnice do
     #{inspect(stream_id)}, cause: bad_relay_type
     """)
 
-    {:error, :bad_relay_type}
+    {{:error, :bad_relay_type}, state}
   end
 
-  defp do_set_relay_info(%{cnode: cnode}, stream_id, component_id, %{
+  defp do_set_relay_info(state, stream_id, component_id, %{
          server_addr: server_addr,
          server_port: server_port,
          username: username,
@@ -621,27 +639,73 @@ defmodule ExLibnice do
          relay_type: relay_type
        }) do
     with {:ok, server_ip} <- lookup_addr(server_addr),
-         :ok <-
-           Unifex.CNode.call(cnode, :set_relay_info, [
-             stream_id,
-             component_id,
-             :inet.ntoa(server_ip) |> to_string(),
-             server_port,
-             username,
-             password,
-             Atom.to_string(relay_type)
-           ]) do
-      :ok
+         {:ok, state} <-
+           call(
+             state.impl,
+             :set_relay_info,
+             [
+               stream_id,
+               component_id,
+               :inet.ntoa(server_ip) |> to_string(),
+               server_port,
+               username,
+               password,
+               Atom.to_string(relay_type)
+             ],
+             state
+           ) do
+      {:ok, state}
     else
-      {:error, cause} = error ->
+      {{:error, cause}, _state} = ret ->
         Logger.warn("""
         Couldn't set TURN server #{inspect(server_addr)} #{inspect(server_port)} \
         #{inspect(relay_type)} for component: #{inspect(component_id)} in stream: \
         #{inspect(stream_id)}, cause: #{inspect(cause)}
         """)
 
-        error
+        ret
     end
+  end
+
+  defp do_set_remote_candidate(candidate, stream_id, component_id, state) do
+    case call(state.impl, :set_remote_candidate, [candidate, stream_id, component_id], state) do
+      {:ok, state} ->
+        Logger.debug("Set remote candidate: #{inspect(candidate)}")
+        {:reply, :ok, state}
+
+      {{:error, cause}, state} ->
+        Logger.warn("Couldn't set remote candidate: #{inspect(cause)}")
+        {:reply, {:error, cause}, state}
+    end
+  end
+
+  defp call(NIF, :init = func, args, state) do
+    {ret, native_state} = apply(ExLibnice.Native, func, args)
+    {ret, %{state | native_state: native_state}}
+  end
+
+  defp call(NIF, func, args, state) do
+    {ret, native_state} = apply(ExLibnice.Native, func, [state.native_state | args])
+    {ret, %{state | native_state: native_state}}
+  end
+
+  defp call(CNode, func, args, %{cnode: nil} = state) do
+    {:ok, cnode} = Unifex.CNode.start_link(:native)
+    call(CNode, func, args, %{state | cnode: cnode})
+  end
+
+  defp call(CNode, func, args, state) do
+    ret = apply(Unifex.CNode, :call, [state.cnode, func, args])
+    {ret, state}
+  end
+
+  defp lookup_stun_servers(stun_servers) do
+    Bunch.Enum.try_map(stun_servers, fn %{server_addr: addr, server_port: port} ->
+      case lookup_addr(addr) do
+        {:ok, ip} -> {:ok, "#{:inet.ntoa(ip)}:#{port}"}
+        {:error, _cause} = error -> error
+      end
+    end)
   end
 
   defp lookup_addr({_a, _b, _c, _d} = addr), do: {:ok, addr}
@@ -651,18 +715,6 @@ defmodule ExLibnice do
     case :inet_res.lookup(to_charlist(addr), :in, :a) do
       [] -> {:error, :failed_to_lookup_address}
       [h | _t] -> {:ok, h}
-    end
-  end
-
-  defp do_set_remote_candidate(candidate, stream_id, component_id, %{cnode: cnode} = state) do
-    case Unifex.CNode.call(cnode, :set_remote_candidate, [candidate, stream_id, component_id]) do
-      :ok ->
-        Logger.debug("Set remote candidate: #{inspect(candidate)}")
-        {:reply, :ok, state}
-
-      {:error, cause} ->
-        Logger.warn("Couldn't set remote candidate: #{inspect(cause)}")
-        {:reply, {:error, cause}, state}
     end
   end
 end

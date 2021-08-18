@@ -23,6 +23,13 @@ end
 ## Usage
 
 Basically this library works similarly to [libnice].
+
+`ExLibnice` can work both as CNode and as NIF.
+By default `CNode` implementation is used however, user can change it by passing proper option while starting `ExLibnice` (see below) or by `config.exs`:
+```elixir
+config :ex_libnice, impl: :NIF
+```
+
 Example flow can look in the following way (this is not complete i.e. runnable example).
 
 Listed functions must be invoked on both peers.
@@ -30,6 +37,7 @@ Listed functions must be invoked on both peers.
 # Init ExLibnice
 {:ok, pid} =
   ExLibnice.start_link(
+    impl: NIF,
     parent: self(),
     stun_servers: [
       %{server_addr: {64, 233, 161, 127}, server_port: 19_302},

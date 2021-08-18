@@ -1,9 +1,19 @@
 defmodule ExLibnice.IntegrationTest do
   use ExUnit.Case, async: true
 
-  test "ice-trickle" do
-    {:ok, tx_pid} = ExLibnice.Support.TestPeer.start_link(self())
-    {:ok, rx_pid} = ExLibnice.Support.TestPeer.start_link(self())
+  describe "ice-trickle" do
+    test "NIF wrapper" do
+      test_ice_trickle(NIF)
+    end
+
+    test "CNode wrapper" do
+      test_ice_trickle(CNode)
+    end
+  end
+
+  defp test_ice_trickle(impl) do
+    {:ok, tx_pid} = ExLibnice.Support.TestPeer.start_link(parent: self(), impl: impl)
+    {:ok, rx_pid} = ExLibnice.Support.TestPeer.start_link(parent: self(), impl: impl)
 
     :ok = ExLibnice.Support.TestPeer.set_peer(tx_pid, rx_pid)
     :ok = ExLibnice.Support.TestPeer.set_peer(rx_pid, tx_pid)
