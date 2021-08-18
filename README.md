@@ -15,7 +15,7 @@ The package can be installed by adding `ex_libnice` to your list of dependencies
 ```elixir
 def deps do
   [
-    {:ex_libnice, "~> 0.5.0"}
+    {:ex_libnice, "~> 0.5.1"}
   ]
 end
 ```

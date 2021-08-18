@@ -276,11 +276,11 @@ defmodule ExLibnice do
 
     {:ok, stun_servers} = lookup_stun_servers(opts[:stun_servers])
 
-    impl = opts[:impl] || Application.get_env(:ex_libnice, :impl, CNode)
+    impl = Application.get_env(:ex_libnice, :impl) || opts[:impl] || CNode
     state = %State{parent: opts[:parent], impl: impl}
 
     {:ok, state} =
-      call(opts[:impl], :init, [stun_servers, opts[:controlling_mode], min_port, max_port], state)
+      call(impl, :init, [stun_servers, opts[:controlling_mode], min_port, max_port], state)
 
     Logger.debug("Initializing mDNS lookup process")
     Mdns.Client.start()
