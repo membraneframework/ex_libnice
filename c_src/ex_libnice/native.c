@@ -315,14 +315,14 @@ UNIFEX_TERM send_payload(UnifexEnv *env, State *state, unsigned int stream_id,
 
 void handle_destroy_state(UnifexEnv *env, State *state) {
   UNIFEX_UNUSED(env);
+  if (state->agent) {
+    g_object_unref(state->agent);
+    state->agent = NULL;
+  }
   g_main_loop_quit(state->gloop);
   if (state->gloop) {
     g_main_loop_unref(state->gloop);
     state->gloop = NULL;
-  }
-  if (state->agent) {
-    g_object_unref(state->agent);
-    state->agent = NULL;
   }
   if (state->env) {
     unifex_free_env(state->env);
