@@ -81,6 +81,7 @@ UNIFEX_TERM init(UnifexEnv *env, char **stun_servers, unsigned int stun_servers_
 static void *main_loop_thread_func(void *user_data) {
   GMainLoop *loop = (GMainLoop *)user_data;
   g_main_loop_run(loop);
+  printf("Exiting\n");
   return NULL;
 }
 
@@ -325,8 +326,11 @@ void handle_destroy_state(UnifexEnv *env, State *state) {
     g_object_unref(state->agent);
     state->agent = NULL;
   }
-  g_main_loop_quit(state->gloop);
   if (state->gloop) {
+    g_main_loop_quit(state->gloop);
+    printf("Joining\n");
+    pthread_join(state->gloop_tid, NULL);
+    printf("After join\n");
     g_main_loop_unref(state->gloop);
     state->gloop = NULL;
   }
