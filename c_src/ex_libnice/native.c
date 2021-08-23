@@ -69,7 +69,7 @@ UNIFEX_TERM init(UnifexEnv *env, char **stun_servers, unsigned int stun_servers_
   g_signal_connect(G_OBJECT(agent), "new-selected-pair",
                    G_CALLBACK(cb_new_selected_pair), state);
 
-  if(pthread_create(&state->gloop_tid, NULL, main_loop_thread_func, (void *)state->gloop) != 0) {
+  if(unifex_thread_create("main loop thread", &state->gloop_tid, &main_loop_thread_func, (void *)state->gloop) != 0) {
     return unifex_raise(env, "failed to create main loop thread");
   }
 
@@ -81,7 +81,6 @@ UNIFEX_TERM init(UnifexEnv *env, char **stun_servers, unsigned int stun_servers_
 static void *main_loop_thread_func(void *user_data) {
   GMainLoop *loop = (GMainLoop *)user_data;
   g_main_loop_run(loop);
-  printf("Exiting\n");
   return NULL;
 }
 
@@ -328,9 +327,7 @@ void handle_destroy_state(UnifexEnv *env, State *state) {
   }
   if (state->gloop) {
     g_main_loop_quit(state->gloop);
-    printf("Joining\n");
-    pthread_join(state->gloop_tid, NULL);
-    printf("After join\n");
+    unifex_thread_join(state->gloop_tid, NULL);
     g_main_loop_unref(state->gloop);
     state->gloop = NULL;
   }

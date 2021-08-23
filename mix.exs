@@ -37,7 +37,8 @@ defmodule ExLibnice.MixProject do
 
   defp deps do
     [
-      {:unifex, "~> 0.6.0"},
+      # {:unifex, "~> 0.6.0"},
+      {:unifex, github: "membraneframework/unifex", branch: "cnode-thread-api"},
       {:bunch, "~> 1.3.0"},
       {:mdns, "~> 1.0.12"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
