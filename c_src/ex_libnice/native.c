@@ -90,7 +90,8 @@ static void cb_candidate_gathering_done(NiceAgent *agent, guint stream_id,
   UNIFEX_UNUSED(stream_id);
   State *state = (State *)user_data;
   UnifexEnv *env = unifex_alloc_env(state->env);
-  send_candidate_gathering_done(env, state->reply_to, 0, stream_id);
+  send_candidate_gathering_done(env, state->reply_to, 1, stream_id);
+  unifex_free_env(env);
 }
 
 static void cb_component_state_changed(NiceAgent *agent, guint stream_id,
@@ -100,10 +101,11 @@ static void cb_component_state_changed(NiceAgent *agent, guint stream_id,
   State *state = (State *)user_data;
   UnifexEnv *env = unifex_alloc_env(state->env);
   if(component_state == NICE_COMPONENT_STATE_FAILED) {
-    send_component_state_failed(env, state->reply_to, 0, stream_id, component_id);
+    send_component_state_failed(env, state->reply_to, 1, stream_id, component_id);
   } else if(component_state == NICE_COMPONENT_STATE_READY) {
-    send_component_state_ready(env, state->reply_to, 0, stream_id, component_id);
+    send_component_state_ready(env, state->reply_to, 1, stream_id, component_id);
   }
+  unifex_free_env(env);
 }
 
 static void cb_new_candidate_full(NiceAgent *agent, NiceCandidate *candidate,
@@ -112,8 +114,9 @@ static void cb_new_candidate_full(NiceAgent *agent, NiceCandidate *candidate,
   UnifexEnv *env = unifex_alloc_env(state->env);
   gchar *candidate_sdp_str =
       nice_agent_generate_local_candidate_sdp(agent, candidate);
-  send_new_candidate_full(env, state->reply_to, 0, candidate_sdp_str);
+  send_new_candidate_full(env, state->reply_to, 1, candidate_sdp_str);
   g_free(candidate_sdp_str);
+  unifex_free_env(env);
 }
 
 
@@ -128,8 +131,9 @@ static void cb_new_remote_candidate_full(NiceAgent *agent, NiceCandidate *candid
   */
   gchar *candidate_sdp_str =
       nice_agent_generate_local_candidate_sdp(agent, candidate);
-  send_new_remote_candidate_full(env, state->reply_to, 0, candidate_sdp_str);
+  send_new_remote_candidate_full(env, state->reply_to, 1, candidate_sdp_str);
   g_free(candidate_sdp_str);
+  unifex_free_env(env);
 }
 
 static void cb_new_selected_pair(NiceAgent *agent, guint stream_id,
@@ -138,8 +142,9 @@ static void cb_new_selected_pair(NiceAgent *agent, guint stream_id,
   UNIFEX_UNUSED(agent);
   State *state = (State *)user_data;
   UnifexEnv *env = unifex_alloc_env(state->env);
-  send_new_selected_pair(env, state->reply_to, 0, stream_id, component_id,
+  send_new_selected_pair(env, state->reply_to, 1, stream_id, component_id,
                          lfoundation, rfoundation);
+  unifex_free_env(env);
 }
 
 static void cb_recv(NiceAgent *_agent, guint stream_id, guint component_id,
@@ -149,8 +154,9 @@ static void cb_recv(NiceAgent *_agent, guint stream_id, guint component_id,
   UnifexEnv *env = unifex_alloc_env(state->env);
   UnifexPayload *payload = unifex_payload_alloc(env, UNIFEX_PAYLOAD_BINARY, len);
   memcpy(payload->data, buf, len);
-  send_ice_payload(env, state->reply_to, 0, stream_id, component_id, payload);
+  send_ice_payload(env, state->reply_to, 1, stream_id, component_id, payload);
   unifex_payload_release(payload);
+  unifex_free_env(env);
 }
 
 UNIFEX_TERM add_stream(UnifexEnv *env, UnifexState *state,
