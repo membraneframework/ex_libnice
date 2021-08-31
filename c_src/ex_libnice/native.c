@@ -141,10 +141,12 @@ static void cb_recv(NiceAgent *_agent, guint stream_id, guint component_id,
                     guint len, gchar *buf, gpointer user_data) {
   UNIFEX_UNUSED(_agent);
   State *state = (State *)user_data;
-  UnifexPayload *payload = unifex_payload_alloc(state->env, UNIFEX_PAYLOAD_BINARY, len);
+  UnifexPayload *payload = (UnifexPayload *)unifex_alloc(sizeof(UnifexPayload));
+  unifex_payload_alloc(state->env, UNIFEX_PAYLOAD_BINARY, len, payload);
   memcpy(payload->data, buf, len);
   send_ice_payload(state->env, state->reply_to, 1, stream_id, component_id, payload);
   unifex_payload_release(payload);
+  unifex_free(payload);
 }
 
 UNIFEX_TERM add_stream(UnifexEnv *env, UnifexState *state,
