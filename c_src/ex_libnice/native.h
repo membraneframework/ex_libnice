@@ -10,7 +10,7 @@ struct State {
   UnifexEnv *env;
   GMainLoop *gloop;
   NiceAgent *agent;
-  pthread_t gloop_tid;
+  UnifexTid gloop_tid;
   unsigned int min_port;
   unsigned int max_port;
   UnifexPid reply_to;
