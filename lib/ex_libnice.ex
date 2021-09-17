@@ -52,7 +52,8 @@ defmodule ExLibnice do
           server_port: 0..65_535,
           username: String.t(),
           password: String.t(),
-          relay_type: :udp | :tcp | :tls
+          relay_type: :udp | :tcp | :tls,
+          pid: pid() | nil
         }
 
   @typedoc """
@@ -525,7 +526,7 @@ defmodule ExLibnice do
 
   @impl true
   def handle_info(
-        {:component_state_ready, _stream_id, _component_id} = msg,
+        {:component_state_ready, _stream_id, _component_id, _port} = msg,
         %State{parent: parent} = state
       ) do
     Logger.debug("#{inspect(msg)}")

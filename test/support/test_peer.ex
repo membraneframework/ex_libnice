@@ -96,7 +96,7 @@ defmodule ExLibnice.Support.TestPeer do
 
   @impl true
   def handle_info(
-        {:component_state_ready, _stream_id, _component_id},
+        {:component_state_ready, _stream_id, _component_id, _port},
         %{parent: parent} = state
       ) do
     send(parent, {self(), :ready})
