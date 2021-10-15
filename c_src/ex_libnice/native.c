@@ -86,8 +86,8 @@ UNIFEX_TERM init(UnifexEnv *env, char **stun_servers,
   g_signal_connect(G_OBJECT(agent), "new-selected-pair",
                    G_CALLBACK(cb_new_selected_pair), state);
 
-  if (pthread_create(&state->gloop_tid, NULL, main_loop_thread_func,
-                     (void *)state->gloop) != 0) {
+  if (unifex_thread_create("main loop thread", &state->gloop_tid,
+                           &main_loop_thread_func, (void *)state->gloop) != 0) {
     return unifex_raise(env, "failed to create main loop thread");
   }
 
@@ -107,7 +107,7 @@ static void cb_candidate_gathering_done(NiceAgent *agent, guint stream_id,
   UNIFEX_UNUSED(agent);
   UNIFEX_UNUSED(stream_id);
   State *state = (State *)user_data;
-  send_candidate_gathering_done(state->env, state->reply_to, 0, stream_id);
+  send_candidate_gathering_done(state->env, state->reply_to, 1, stream_id);
 }
 
 static void cb_component_state_changed(NiceAgent *agent, guint stream_id,
@@ -142,7 +142,7 @@ static void cb_new_candidate_full(NiceAgent *agent, NiceCandidate *candidate,
   State *state = (State *)user_data;
   gchar *candidate_sdp_str =
       nice_agent_generate_local_candidate_sdp(agent, candidate);
-  send_new_candidate_full(state->env, state->reply_to, 0, candidate_sdp_str);
+  send_new_candidate_full(state->env, state->reply_to, 1, candidate_sdp_str);
   g_free(candidate_sdp_str);
 }
 
@@ -158,7 +158,7 @@ static void cb_new_remote_candidate_full(NiceAgent *agent,
   */
   gchar *candidate_sdp_str =
       nice_agent_generate_local_candidate_sdp(agent, candidate);
-  send_new_remote_candidate_full(state->env, state->reply_to, 0,
+  send_new_remote_candidate_full(state->env, state->reply_to, 1,
                                  candidate_sdp_str);
   g_free(candidate_sdp_str);
 }
@@ -168,7 +168,8 @@ static void cb_new_selected_pair(NiceAgent *agent, guint stream_id,
                                  gchar *rfoundation, gpointer user_data) {
   UNIFEX_UNUSED(agent);
   State *state = (State *)user_data;
-  send_new_selected_pair(state->env, state->reply_to, 0, stream_id,
+
+  send_new_selected_pair(state->env, state->reply_to, 1, stream_id,
                          component_id, lfoundation, rfoundation);
 }
 
@@ -176,12 +177,12 @@ static void cb_recv(NiceAgent *_agent, guint stream_id, guint component_id,
                     guint len, gchar *buf, gpointer user_data) {
   UNIFEX_UNUSED(_agent);
   State *state = (State *)user_data;
-  UnifexPayload *payload =
-      unifex_payload_alloc(state->env, UNIFEX_PAYLOAD_BINARY, len);
-  memcpy(payload->data, buf, len);
-  send_ice_payload(state->env, state->reply_to, 0, stream_id, component_id,
-                   payload);
-  unifex_payload_release(payload);
+  UnifexPayload payload;
+  unifex_payload_alloc(state->env, UNIFEX_PAYLOAD_BINARY, len, &payload);
+  memcpy(payload.data, buf, len);
+  send_ice_payload(state->env, state->reply_to, 1, stream_id, component_id,
+                   &payload);
+  unifex_payload_release(&payload);
 }
 
 UNIFEX_TERM add_stream(UnifexEnv *env, UnifexState *state,
@@ -375,14 +376,15 @@ UNIFEX_TERM send_payload(UnifexEnv *env, State *state, unsigned int stream_id,
 
 void handle_destroy_state(UnifexEnv *env, State *state) {
   UNIFEX_UNUSED(env);
-  g_main_loop_quit(state->gloop);
-  if (state->gloop) {
-    g_main_loop_unref(state->gloop);
-    state->gloop = NULL;
-  }
   if (state->agent) {
     g_object_unref(state->agent);
     state->agent = NULL;
+  }
+  if (state->gloop) {
+    g_main_loop_quit(state->gloop);
+    unifex_thread_join(state->gloop_tid, NULL);
+    g_main_loop_unref(state->gloop);
+    state->gloop = NULL;
   }
   if (state->env) {
     unifex_free_env(state->env);
