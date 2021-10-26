@@ -8,13 +8,6 @@
 #include "native.h"
 #include "parser.h"
 
-// struct _GInetSocketAddressPrivate {
-//   GInetAddress *address;
-//   guint16 port;
-//   guint32 flowinfo;
-//   guint32 scope_id;
-// };
-
 static void cb_candidate_gathering_done(NiceAgent *agent, guint stream_id,
                                         gpointer user_data);
 static void cb_component_state_changed(NiceAgent *agent, guint stream_id,
@@ -120,20 +113,8 @@ static void cb_component_state_changed(NiceAgent *agent, guint stream_id,
     send_component_state_failed(state->env, state->reply_to, 1, stream_id,
                                 component_id);
   } else if (component_state == NICE_COMPONENT_STATE_READY) {
-
-    GSocket *socket =
-        nice_agent_get_selected_socket(agent, stream_id, component_id);
-    GSocketAddress *address = g_socket_get_local_address(socket, NULL);
-
-    GInetSocketAddress *addr;
-
-    addr = G_INET_SOCKET_ADDRESS(address);
-
-    unsigned short *us1_addr =
-        (unsigned short *)(((long long)addr->priv) + (long long)8);
-    unsigned short us1 = *us1_addr;
     send_component_state_ready(state->env, state->reply_to, 1, stream_id,
-                               component_id, (unsigned int)us1);
+                               component_id);
   }
 }
 

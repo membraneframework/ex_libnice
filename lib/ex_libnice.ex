@@ -526,7 +526,7 @@ defmodule ExLibnice do
 
   @impl true
   def handle_info(
-        {:component_state_ready, _stream_id, _component_id, _port} = msg,
+        {:component_state_ready, _stream_id, _component_id} = msg,
         %State{parent: parent} = state
       ) do
     Logger.debug("#{inspect(msg)}")
