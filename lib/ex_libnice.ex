@@ -282,11 +282,6 @@ defmodule ExLibnice do
     {:ok, state} =
       call(impl, :init, [stun_servers, opts[:controlling_mode], min_port, max_port], state)
 
-    Logger.debug("Initializing mDNS lookup process")
-    Mdns.Client.start()
-    Logger.debug("Registering for mDNS events")
-    Mdns.EventManager.register()
-
     {:ok, state}
   end
 
@@ -436,10 +431,14 @@ defmodule ExLibnice do
     withl candidate_check: 6 <- length(candidate_sp),
           do: address = Enum.at(candidate_sp, 4),
           mdns_check: true <- String.ends_with?(address, ".local") do
-      Logger.debug("Sending query to resolve mDNS address #{inspect(address)}")
-      Mdns.Client.query(address)
-      state = put_in(state, [:mdns_queries, address], {candidate, stream_id, component_id})
-      {:reply, :ok, state}
+      if Application.get_env(:ex_libnice, :mdns, true) do
+        ExLibnice.Mdns.query(self(), address)
+        state = put_in(state, [:mdns_queries, address], {candidate, stream_id, component_id})
+        {:reply, :ok, state}
+      else
+        Logger.debug("Got mdns address but mdns client is turned off. Ignoring.")
+        {:reply, :ok, state}
+      end
     else
       candidate_check: _ -> {:reply, {:error, :failed_to_parse_sdp_string}, state}
       mdns_check: _ -> do_set_remote_candidate(candidate, stream_id, component_id, state)
@@ -553,27 +552,15 @@ defmodule ExLibnice do
   end
 
   @impl true
-  def handle_info({_namespace, %Mdns.Client.Device{} = dev} = msg, state) do
-    Logger.debug("mDNS address resolved #{inspect(msg)}")
+  def handle_info({:mdns_response, address, ip}, state) do
+    {{candidate, stream_id, component_id}, state} = pop_in(state, [:mdns_queries, address])
 
-    {query, state} = pop_in(state, [:mdns_queries, dev.domain])
+    candidate_parts =
+      String.split(candidate, " ", parts: 6)
+      |> List.replace_at(4, :inet.ntoa(ip))
 
-    case query do
-      nil ->
-        Logger.debug("""
-        mDNS response for non existing candidate.
-        We have probably already resolved address #{inspect(dev.domain)}
-        """)
-
-      {candidate, stream_id, component_id} ->
-        candidate_parts =
-          String.split(candidate, " ", parts: 6)
-          |> List.replace_at(4, :inet.ntoa(dev.ip))
-
-        candidate = Enum.join(candidate_parts, " ")
-        do_set_remote_candidate(candidate, stream_id, component_id, state)
-    end
-
+    candidate = Enum.join(candidate_parts, " ")
+    do_set_remote_candidate(candidate, stream_id, component_id, state)
     {:noreply, state}
   end
 
@@ -703,7 +690,7 @@ defmodule ExLibnice do
     Bunch.Enum.try_map(stun_servers, fn %{server_addr: addr, server_port: port} ->
       case lookup_addr(addr) do
         {:ok, ip} -> {:ok, "#{:inet.ntoa(ip)}:#{port}"}
-        {:error, _cause} = error -> error
+        {:error, cause} -> {:error, cause, addr}
       end
     end)
   end

@@ -28,6 +28,7 @@ defmodule ExLibnice.MixProject do
 
   def application do
     [
+      mod: {ExLibnice.App, []},
       extra_applications: [:logger]
     ]
   end
