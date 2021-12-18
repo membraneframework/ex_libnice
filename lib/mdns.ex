@@ -1,6 +1,6 @@
 defmodule ExLibnice.Mdns do
   @moduledoc """
-  Module for executing mDNS queries.
+  Module responsible for executing mDNS queries.
 
   It can be turned off by `config :ex_libnice, mdns: false`.
   """
@@ -14,7 +14,7 @@ defmodule ExLibnice.Mdns do
 
   @spec query(String.t()) :: :ok
   def query(address) do
-    GenServer.cast(__MODULE__, {:query, self(), address})
+    send(__MODULE__, {:query, self(), address})
   end
 
   @impl true
