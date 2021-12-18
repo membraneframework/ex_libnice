@@ -23,7 +23,7 @@ defmodule ExLibnice do
             stream_components: %{stream_id: integer(), n_components: integer()},
             mdns_queries: %{
               query: String.t(),
-              candidate: {sdp :: String.t(), stream_id :: integer(), component_id :: integer()}
+              candidates: [{sdp :: String.t(), stream_id :: integer(), component_id :: integer()}]
             }
           }
 
@@ -432,8 +432,17 @@ defmodule ExLibnice do
           do: address = Enum.at(candidate_sp, 4),
           mdns_check: true <- String.ends_with?(address, ".local") do
       if Application.get_env(:ex_libnice, :mdns, true) do
-        ExLibnice.Mdns.query(self(), address)
-        state = put_in(state, [:mdns_queries, address], {candidate, stream_id, component_id})
+        state =
+          update_in(state, [:mdns_queries, address], fn
+            # if we haven't query this address yet
+            nil ->
+              ExLibnice.Mdns.query(address)
+              [{candidate, stream_id, component_id}]
+
+            candidates ->
+              candidates ++ [{candidate, stream_id, component_id}]
+          end)
+
         {:reply, :ok, state}
       else
         Logger.debug("Got mdns address but mdns client is turned off. Ignoring.")
@@ -553,14 +562,17 @@ defmodule ExLibnice do
 
   @impl true
   def handle_info({:mdns_response, address, ip}, state) do
-    {{candidate, stream_id, component_id}, state} = pop_in(state, [:mdns_queries, address])
+    {candidates, state} = pop_in(state, [:mdns_queries, address])
 
-    candidate_parts =
-      String.split(candidate, " ", parts: 6)
-      |> List.replace_at(4, :inet.ntoa(ip))
+    for {candidate, stream_id, component_id} <- candidates do
+      candidate_parts =
+        String.split(candidate, " ", parts: 6)
+        |> List.replace_at(4, :inet.ntoa(ip))
 
-    candidate = Enum.join(candidate_parts, " ")
-    do_set_remote_candidate(candidate, stream_id, component_id, state)
+      candidate = Enum.join(candidate_parts, " ")
+      do_set_remote_candidate(candidate, stream_id, component_id, state)
+    end
+
     {:noreply, state}
   end
 
