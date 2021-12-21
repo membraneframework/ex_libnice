@@ -26,8 +26,15 @@ Basically this library works similarly to [libnice].
 
 `ExLibnice` can work both as CNode and as NIF.
 By default `CNode` implementation is used however, user can change it by passing proper option while starting `ExLibnice` (see below) or by `config.exs`:
+
 ```elixir
 config :ex_libnice, impl: :NIF
+```
+
+User can also choose whether to resolve mDNS addresses or not:
+
+```elixir
+config :ex_libnice, mdns: false
 ```
 
 Example flow can look in the following way (this is not complete i.e. runnable example).
@@ -87,6 +94,7 @@ stream is ready to send and receive messages.
 For more complete examples please refer to
 [membrane_ice_plugin](https://github.com/membraneframework/membrane_ice_plugin) where we use
 `ex_libnice` or our integration test.
+
 
 ## Copyright and License
 

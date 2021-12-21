@@ -440,7 +440,7 @@ defmodule ExLibnice do
               [{candidate, stream_id, component_id}]
 
             candidates ->
-              candidates ++ [{candidate, stream_id, component_id}]
+              [{candidate, stream_id, component_id} | candidates]
           end)
 
         {:reply, :ok, state}
@@ -655,6 +655,13 @@ defmodule ExLibnice do
            ) do
       {:ok, state}
     else
+      {:error, :failed_to_lookup_addr} = err ->
+        Logger.warn("""
+        Couldn't lookup TURN server address #{inspect(server_addr)}
+        """)
+
+        {err, state}
+
       {{:error, cause}, _state} = ret ->
         Logger.warn("""
         Couldn't set TURN server #{inspect(server_addr)} #{inspect(server_port)} \

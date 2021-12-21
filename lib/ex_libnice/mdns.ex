@@ -27,18 +27,17 @@ defmodule ExLibnice.Mdns do
   end
 
   @impl true
-  def handle_cast({:query, from, address}, state) do
-    Logger.debug("Sending query to resolve mDNS address #{inspect(address)}")
-
+  def handle_info({:query, from, address}, state) do
     state =
       update_in(state, [:queries, address], fn
         # first query for this address
         nil ->
+          Logger.debug("Sending query to resolve mDNS address #{inspect(address)}")
           Mdns.Client.query(address)
           [from]
 
         pids ->
-          pids ++ [from]
+          [from | pids]
       end)
 
     {:noreply, state}

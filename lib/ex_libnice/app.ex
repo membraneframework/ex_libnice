@@ -1,17 +1,6 @@
 defmodule ExLibnice.App do
-  @moduledoc """
-  ExLibnice Application
-
-  It will spawn one mDNS client responsible for executing mDNS queries.
-  This feature can be turned off if mDNS is not needed by
-
-  ```elixir
-  config :ex_libnice, mdns: false
-  ```
-  """
+  @moduledoc false
   use Application
-
-  require Logger
 
   @impl true
   def start(_start_type, _start_args) do
