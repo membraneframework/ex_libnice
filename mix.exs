@@ -1,7 +1,7 @@
 defmodule ExLibnice.MixProject do
   use Mix.Project
 
-  @version "0.7.0"
+  @version "0.8.0"
   @github_url "https://github.com/membraneframework/ex_libnice"
 
   def project do
@@ -38,7 +38,7 @@ defmodule ExLibnice.MixProject do
 
   defp deps do
     [
-      {:unifex, "~> 0.7.0"},
+      {:unifex, "~> 1.0"},
       {:bunch, "~> 1.3.0"},
       {:mdns, "~> 1.0.12"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
