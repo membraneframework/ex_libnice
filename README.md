@@ -10,6 +10,20 @@ It is a part of [Membrane Multimedia Framework](https://membraneframework.org).
 
 ## Installation
 
+First, install [libnice] on your system:
+
+### macOS
+
+```bash
+brew install libnice
+```
+
+### Ubuntu
+
+```bash
+sudo apt-get install libnice-dev
+```
+
 The package can be installed by adding `ex_libnice` to your list of dependencies in `mix.exs`:
 
 ```elixir
@@ -40,6 +54,7 @@ config :ex_libnice, mdns: false
 Example flow can look in the following way (this is not complete i.e. runnable example).
 
 Listed functions must be invoked on both peers.
+
 ```elixir
 # Init ExLibnice
 {:ok, pid} =
@@ -90,11 +105,9 @@ This will start connectivity checks. Receiving message
 `{:component_state_ready, stream_id, component_id}` indicates that the given component in the given
 stream is ready to send and receive messages.
 
-
 For more complete examples please refer to
 [membrane_ice_plugin](https://github.com/membraneframework/membrane_ice_plugin) where we use
 `ex_libnice` or our integration test.
-
 
 ## Copyright and License
 
@@ -105,4 +118,3 @@ Copyright 2020, [Software Mansion](https://swmansion.com/?utm_source=git&utm_med
 Licensed under the [Apache License, Version 2.0](LICENSE)
 
 [libnice]: https://libnice.freedesktop.org/
-
