@@ -31,7 +31,7 @@ defmodule ExLibnice.BundlexProject do
       native: [
         sources: ["native.c", "parser.c"],
         deps: [unifex: :unifex],
-        os_deps: [{get_libnice_url(), "nice"}],
+        os_deps: [{[get_libnice_url(), :pkg_config], "nice"}],
         interface: [:nif, :cnode],
         preprocessor: Unifex
       ]
