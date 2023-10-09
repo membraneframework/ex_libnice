@@ -298,7 +298,7 @@ defmodule ExLibnice do
         {:reply, {:ok, stream_id}, put_in(state.stream_components[stream_id], n_components)}
 
       {{:error, cause}, state} ->
-        Logger.warn("""
+        Logger.warning("""
         Couldn't add stream with #{n_components} components and name "#{inspect(name)}": \
         #{inspect(cause)}
         """)
@@ -325,7 +325,7 @@ defmodule ExLibnice do
         {:reply, :ok, state}
 
       {{:error, cause}, state} ->
-        Logger.warn("""
+        Logger.warning("""
         Couldn't forget TURN servers for component: #{inspect(component_id)} in stream: \
         #{inspect(stream_id)}, reason: #{inspect(cause)}
         """)
@@ -349,7 +349,7 @@ defmodule ExLibnice do
         {:reply, {:ok, added_cand_num}, state}
 
       {{:error, cause}, state} ->
-        Logger.warn("Couldn't parse remote sdp #{inspect(remote_sdp)}")
+        Logger.warning("Couldn't parse remote sdp #{inspect(remote_sdp)}")
         {:reply, {:error, cause}, state}
     end
   end
@@ -409,7 +409,7 @@ defmodule ExLibnice do
         {:reply, :ok, state}
 
       {{:error, cause}, state} ->
-        Logger.warn("peer_candidate_gathering_done: #{inspect(cause)}")
+        Logger.warning("peer_candidate_gathering_done: #{inspect(cause)}")
         {:reply, {:error, cause}, state}
     end
   end
@@ -462,7 +462,7 @@ defmodule ExLibnice do
         {:reply, :ok, state}
 
       {{:error, cause}, state} ->
-        Logger.warn("Couldn't restart ICE")
+        Logger.warning("Couldn't restart ICE")
         {:reply, {:error, cause}, state}
     end
   end
@@ -475,7 +475,7 @@ defmodule ExLibnice do
         {:reply, :ok, state}
 
       {{:error, cause}, state} ->
-        Logger.warn("Couldn't restart stream #{inspect(stream_id)}")
+        Logger.warning("Couldn't restart stream #{inspect(stream_id)}")
         {:reply, {:error, cause}, state}
     end
   end
@@ -487,7 +487,7 @@ defmodule ExLibnice do
         {:reply, :ok, state}
 
       {{:error, cause}, state} ->
-        Logger.warn("Couldn't send payload: #{inspect(cause)}")
+        Logger.warning("Couldn't send payload: #{inspect(cause)}")
         {:reply, {:error, cause}, state}
     end
   end
@@ -546,7 +546,7 @@ defmodule ExLibnice do
         {:component_state_failed, _stream_id, _component_id} = msg,
         %State{parent: parent} = state
       ) do
-    Logger.warn("#{inspect(msg)}")
+    Logger.warning("#{inspect(msg)}")
     send(parent, msg)
     {:noreply, state}
   end
@@ -578,7 +578,7 @@ defmodule ExLibnice do
 
   @impl true
   def handle_info(msg, state) do
-    Logger.warn("Unknown message #{inspect(msg)}")
+    Logger.warning("Unknown message #{inspect(msg)}")
     {:noreply, state}
   end
 
@@ -603,7 +603,7 @@ defmodule ExLibnice do
   defp do_set_relay_info(state, stream_id, :all, relay_info) do
     case Map.get(state.stream_components, stream_id) do
       nil ->
-        Logger.warn("Couldn't set TURN servers. No stream with id #{inspect(stream_id)}")
+        Logger.warning("Couldn't set TURN servers. No stream with id #{inspect(stream_id)}")
 
         {{:error, :bad_stream_id}, state}
 
@@ -621,7 +621,7 @@ defmodule ExLibnice do
          %{server_addr: server_addr, server_port: server_port, relay_type: relay_type}
        )
        when relay_type not in [:udp, :tcp, :tls] do
-    Logger.warn("""
+    Logger.warning("""
     Couldn't set TURN server #{inspect(server_addr)} #{inspect(server_port)} \
     #{inspect(relay_type)} for component: #{inspect(component_id)} in stream: \
     #{inspect(stream_id)}, cause: bad_relay_type
@@ -656,14 +656,14 @@ defmodule ExLibnice do
       {:ok, state}
     else
       {:error, :failed_to_lookup_addr} = err ->
-        Logger.warn("""
+        Logger.warning("""
         Couldn't lookup TURN server address #{inspect(server_addr)}
         """)
 
         {err, state}
 
       {{:error, cause}, _state} = ret ->
-        Logger.warn("""
+        Logger.warning("""
         Couldn't set TURN server #{inspect(server_addr)} #{inspect(server_port)} \
         #{inspect(relay_type)} for component: #{inspect(component_id)} in stream: \
         #{inspect(stream_id)}, cause: #{inspect(cause)}
@@ -680,7 +680,7 @@ defmodule ExLibnice do
         {:reply, :ok, state}
 
       {{:error, cause}, state} ->
-        Logger.warn("Couldn't set remote candidate: #{inspect(cause)}")
+        Logger.warning("Couldn't set remote candidate: #{inspect(cause)}")
         {:reply, {:error, cause}, state}
     end
   end
