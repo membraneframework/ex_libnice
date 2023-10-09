@@ -39,7 +39,7 @@ defmodule ExLibnice.MixProject do
   defp deps do
     [
       {:unifex, "~> 1.0"},
-      {:bundlex, github: "membraneframework/bundlex", branch: "precompiled_deps", override: true},
+      {:bundlex, "~> 1.2"},
       {:bunch, "~> 1.3.0"},
       {:mdns, "~> 1.0.12"},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
