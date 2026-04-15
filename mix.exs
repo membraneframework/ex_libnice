@@ -1,7 +1,7 @@
 defmodule ExLibnice.MixProject do
   use Mix.Project
 
-  @version "0.8.0"
+  @version "0.8.1"
   @github_url "https://github.com/membraneframework/ex_libnice"
 
   def project do
@@ -15,14 +15,15 @@ defmodule ExLibnice.MixProject do
       deps: deps(),
 
       # hex
-      description: "Elixir wrapper over libnice",
+      description: "Libnice Elixir bindings for ICE protocol, enabling WebRTC NAT traversal.",
       package: package(),
 
       # docs
       name: "ExLibnice",
       source_url: @github_url,
       homepage_url: "https://membraneframework.org",
-      docs: docs()
+      docs: docs(),
+      aliases: [docs: ["docs", &prepend_llms_links/1]]
     ]
   end
 
@@ -41,7 +42,7 @@ defmodule ExLibnice.MixProject do
       {:unifex, "~> 1.0"},
       {:bunch, "~> 1.3.0"},
       {:mdns, "~> 1.0.12"},
-      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: :dev, runtime: false},
       {:credo, "~> 1.5", only: :dev, runtime: false}
     ]
@@ -67,4 +68,19 @@ defmodule ExLibnice.MixProject do
       nest_modules_by_prefix: [ExLibnice]
     ]
   end
+
+defp prepend_llms_links(_) do
+  path = "doc/llms.txt"
+
+  if File.exists?(path) do
+    existing = File.read!(path)
+
+    header =
+      "- [Membrane Core AI Skill](https://hexdocs.pm/membrane_core/skill.md)\n" <>
+        "- [Membrane Core](https://hexdocs.pm/membrane_core/llms.txt)\n\n"
+
+    File.write!(path, header <> existing)
+  end
+end
+
 end
