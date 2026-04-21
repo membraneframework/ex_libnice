@@ -7,12 +7,18 @@ on:
 
 jobs:
   build_test:
-    uses: membraneframework/membrane_actions/.github/workflows/build-test.yml@main
+    uses: membraneframework/membrane_actions/.github/workflows/build-test.yml@setup-commands
+    with:
+      setup-commands: apt-get update && apt-get install -y libnice-dev
+
 
   lint:
-    uses: membraneframework/membrane_actions/.github/workflows/lint.yml@main
+    uses: membraneframework/membrane_actions/.github/workflows/lint.yml@setup-commands
     with:
       dialyzer: false
+      setup-commands: apt-get update && apt-get install -y libnice-dev
 
   test:
-    uses: membraneframework/membrane_actions/.github/workflows/test.yml@main
+    uses: membraneframework/membrane_actions/.github/workflows/test.yml@setup-commands
+    with:
+      setup-commands: apt-get update && apt-get install -y libnice-dev
