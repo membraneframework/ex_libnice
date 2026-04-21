@@ -12,7 +12,7 @@ defmodule ExLibnice.BundlexProject do
       native: [
         sources: ["native.c", "parser.c"],
         deps: [unifex: :unifex],
-        pkg_configs: ["nice"],
+        os_deps: [nice: :pkg_config],
         interface: [:nif, :cnode],
         preprocessor: Unifex
       ]
