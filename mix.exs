@@ -1,7 +1,7 @@
 defmodule ExLibnice.MixProject do
   use Mix.Project
 
-  @version "0.8.0"
+  @version "0.8.1"
   @github_url "https://github.com/membraneframework/ex_libnice"
 
   def project do
@@ -13,6 +13,7 @@ defmodule ExLibnice.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      dialyzer: dialyzer(),
 
       # hex
       description: "Elixir wrapper over libnice",
@@ -41,10 +42,25 @@ defmodule ExLibnice.MixProject do
       {:unifex, "~> 1.0"},
       {:bunch, "~> 1.3.0"},
       {:mdns, "~> 1.0.12"},
-      {:ex_doc, "~> 0.23", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0", only: :dev, runtime: false},
-      {:credo, "~> 1.5", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: :dev, runtime: false}
     ]
+  end
+
+  defp dialyzer() do
+    opts = [
+      flags: [:error_handling],
+      plt_add_apps: [:mix, :syntax_tools]
+    ]
+
+    if System.get_env("CI") == "true" do
+      # Store PLTs in cacheable directory for CI
+      File.mkdir_p!(Path.join([__DIR__, "priv", "plts"]))
+      [plt_local_path: "priv/plts", plt_core_path: "priv/plts"] ++ opts
+    else
+      opts
+    end
   end
 
   defp package do
